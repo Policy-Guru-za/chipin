@@ -1,0 +1,614 @@
+{
+  "start_url": "https://developer.getsnapscan.com/#overview",
+  "crawled_at_utc": "2026-01-21T08:46:14Z",
+  "max_depth_reached": 3,
+  "pages": [
+    {
+      "url": "https://developer.getsnapscan.com/#overview",
+      "depth": 0,
+      "title": "Overview",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": null,
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#api-overview",
+        "https://developer.getsnapscan.com/#qr-codes",
+        "https://developer.getsnapscan.com/#payments",
+        "https://developer.getsnapscan.com/#cash-ups",
+        "https://developer.getsnapscan.com/#code-snippets"
+      ],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/"
+      ],
+      "notes": "Single-page (Slate-style) documentation; all major sections navigable via URL fragments; overview mentions e-commerce platform integrations but core API is described in later sections."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#api-overview",
+      "depth": 1,
+      "title": "API Overview",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#overview",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#authentication",
+        "https://developer.getsnapscan.com/#error-codes",
+        "https://developer.getsnapscan.com/#pagination",
+        "https://developer.getsnapscan.com/#rate-limiting",
+        "https://developer.getsnapscan.com/#webhook"
+      ],
+      "outbound_external_links": [],
+      "notes": "Global API behaviours: authentication, error model, pagination, rate limiting, webhook signing."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#authentication",
+      "depth": 2,
+      "title": "Authentication",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#api-overview",
+      "outbound_internal_links": [],
+      "outbound_external_links": [
+        "http://en.wikipedia.org/wiki/Basic_access_authentication"
+      ],
+      "notes": "HTTP Basic Auth; username=API key; password blank; HTTPS required; 401 JSON error example."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#error-codes",
+      "depth": 2,
+      "title": "Error Codes",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#api-overview",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Error responses: JSON object with message; 2xx/4xx/5xx guidance; 400 example."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#pagination",
+      "depth": 2,
+      "title": "Pagination",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#api-overview",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#query-parameters",
+        "https://developer.getsnapscan.com/#response-headers"
+      ],
+      "outbound_external_links": [],
+      "notes": "Pagination parameters (page/perPage/offset) and response headers (X-Total, X-Total-Pages, etc.)."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#query-parameters",
+      "depth": 3,
+      "title": "Query Parameters",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#pagination",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Pagination query parameters. NOTE: This fragment id is duplicated elsewhere on the page; this entry refers to the first occurrence (Pagination section)."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#response-headers",
+      "depth": 3,
+      "title": "Response Headers",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#pagination",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Pagination response headers; documented as integers."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#rate-limiting",
+      "depth": 2,
+      "title": "Rate Limiting",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#api-overview",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Rate limiting returns 429; exponential backoff recommended; no numeric quota specified."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#webhook",
+      "depth": 2,
+      "title": "Webhook",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#api-overview",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#get-a-payment",
+        "https://developer.getsnapscan.com/#get-all-payments",
+        "https://developer.getsnapscan.com/#verifying-payload-authenticity"
+      ],
+      "outbound_external_links": [
+        "https://www.rubydoc.info/gems/activesupport/ActiveSupport%2FSecurityUtils.secure_compare"
+      ],
+      "notes": "Webhook setup via account configuration; POSTs completed and errored payment objects; payload is URL-encoded form with key=payload containing JSON string; signature in Authorization header using HMAC-SHA256 over raw body."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#verifying-payload-authenticity",
+      "depth": 3,
+      "title": "Verifying payload authenticity",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#webhook",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Ruby example; constant-time comparison recommended; signature format 'SnapScan signature=<hash>'."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#qr-codes",
+      "depth": 1,
+      "title": "QR Codes",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#overview",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#creating-the-url",
+        "https://developer.getsnapscan.com/#generating-a-qr-code"
+      ],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/qr/"
+      ],
+      "notes": "Payment initiation mechanism is QR URL construction and QR image generation."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#creating-the-url",
+      "depth": 2,
+      "title": "Creating the URL",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#qr-codes",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#standard-snapcode",
+        "https://developer.getsnapscan.com/#adding-payment-parameters",
+        "https://developer.getsnapscan.com/#limiting-successful-payments-to-unique-id",
+        "https://developer.getsnapscan.com/#adding-extra-parameters"
+      ],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/qr/shopalot",
+        "https://pos.snapscan.io/qr/shopalot?id=Ord123&amount=1000",
+        "https://pos.snapscan.io/qr/shopalot?id=Ord123&amount=1000&strict=true"
+      ],
+      "notes": "SnapCode URL plus optional amount/id/strict and arbitrary query params; mapping to payment fields requiredAmount/merchantReference/extra."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#standard-snapcode",
+      "depth": 3,
+      "title": "Standard SnapCode",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#creating-the-url",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Base URL format for a merchant SnapCode."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#adding-payment-parameters",
+      "depth": 3,
+      "title": "Adding payment parameters",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#creating-the-url",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Query parameters amount and id embedded into payment URL."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#limiting-successful-payments-to-unique-id",
+      "depth": 3,
+      "title": "Limiting successful payments to unique Id",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#creating-the-url",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "strict=true prevents paying same reference twice and paying less than required amount."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#adding-extra-parameters",
+      "depth": 3,
+      "title": "Adding extra parameters",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#creating-the-url",
+      "outbound_internal_links": [],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/qr/shopalot?customValue=123"
+      ],
+      "notes": "Arbitrary query parameters returned under payment.extra."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#generating-a-qr-code",
+      "depth": 2,
+      "title": "Generating a QR code",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#qr-codes",
+      "outbound_internal_links": [],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/qr/shopalot.svg?id=Ord123&amount=1000&snap_code_size=125"
+      ],
+      "notes": "QR image variants (.svg/.png) and snap_code_size (50–500, default 125); size/type params stripped from encoded payment data."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#payments",
+      "depth": 1,
+      "title": "Payments",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#overview",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#the-payment-object",
+        "https://developer.getsnapscan.com/#get-all-payments",
+        "https://developer.getsnapscan.com/#get-a-payment",
+        "https://developer.getsnapscan.com/#get-all-cash-up-payments"
+      ],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/merchant/api/v1/"
+      ],
+      "notes": "Merchant API for querying payment status; pending payments require polling; webhook recommended."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#the-payment-object",
+      "depth": 2,
+      "title": "The payment object",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#payments",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Payment schema, example payload, attribute tables including QR-parameter-derived fields."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#get-all-payments",
+      "depth": 2,
+      "title": "Get all payments",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#payments",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#pagination",
+        "https://developer.getsnapscan.com/#http-request",
+        "https://developer.getsnapscan.com/#response-codes"
+      ],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/merchant/api/v1/payments"
+      ],
+      "notes": "GET /payments with optional filters; default status includes completed/errored/pending; results sorted by descending id."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#http-request",
+      "depth": 3,
+      "title": "HTTP Request",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#get-all-payments",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "HTTP request subsection for Get all payments. NOTE: This fragment id is duplicated elsewhere on the page; this entry refers to the first occurrence (Payments → Get all payments)."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#response-codes",
+      "depth": 3,
+      "title": "Response Codes",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#get-all-payments",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Response codes subsection for Get all payments. NOTE: This fragment id is duplicated elsewhere on the page; this entry refers to the first occurrence (Payments → Get all payments)."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#get-a-payment",
+      "depth": 2,
+      "title": "Get a payment",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#payments",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#http-request-2",
+        "https://developer.getsnapscan.com/#route-parameters",
+        "https://developer.getsnapscan.com/#response-codes-2"
+      ],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/merchant/api/v1/payments/1"
+      ],
+      "notes": "GET /payments/{id} returns a single payment."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#http-request-2",
+      "depth": 3,
+      "title": "HTTP Request",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#get-a-payment",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "HTTP request subsection for Get a payment. NOTE: This fragment id is duplicated elsewhere on the page; this entry refers to the first occurrence (Payments → Get a payment)."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#route-parameters",
+      "depth": 3,
+      "title": "Route Parameters",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#get-a-payment",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Route parameter: id (sequential payment id)."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#response-codes-2",
+      "depth": 3,
+      "title": "Response Codes",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#get-a-payment",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Response codes subsection for Get a payment. NOTE: This fragment id is duplicated elsewhere on the page; this entry refers to the first occurrence (Payments → Get a payment)."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#get-all-cash-up-payments",
+      "depth": 2,
+      "title": "Get all cash up payments",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#payments",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#cash-ups",
+        "https://developer.getsnapscan.com/#http-request-3",
+        "https://developer.getsnapscan.com/#route-parameters-2",
+        "https://developer.getsnapscan.com/#response-codes-3"
+      ],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/merchant/api/v1/payments/cash_ups/1e07ac748d2627ba"
+      ],
+      "notes": "GET /payments/cash_ups/{reference}; returns 500 if cash up period contains pending payments; docs advise waiting a couple of seconds then retry."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#http-request-3",
+      "depth": 3,
+      "title": "HTTP Request",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#get-all-cash-up-payments",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "HTTP request subsection for Get all cash up payments."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#route-parameters-2",
+      "depth": 3,
+      "title": "Route Parameters",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#get-all-cash-up-payments",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Route parameter: reference (cash up reference)."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#response-codes-3",
+      "depth": 3,
+      "title": "Response Codes",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#get-all-cash-up-payments",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Response codes subsection for Get all cash up payments, including 500 pending-payments retry guidance."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#cash-ups",
+      "depth": 1,
+      "title": "Cash Ups",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#overview",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#the-cash-up-object",
+        "https://developer.getsnapscan.com/#create-a-cash-up-period",
+        "https://developer.getsnapscan.com/#get-all-cash-ups"
+      ],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/merchant/api/v1/cash_ups"
+      ],
+      "notes": "Cash up references mark transaction periods; used for reconciliation and fetching payments by cash up period."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#the-cash-up-object",
+      "depth": 2,
+      "title": "The cash up object",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#cash-ups",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Cash up schema (date, reference) and example payload."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#create-a-cash-up-period",
+      "depth": 2,
+      "title": "Create a cash up period",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#cash-ups",
+      "outbound_internal_links": [],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/merchant/api/v1/cash_ups"
+      ],
+      "notes": "POST /cash_ups returns a new reference marking end of current period and start of new one."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#get-all-cash-ups",
+      "depth": 2,
+      "title": "Get all cash ups",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#cash-ups",
+      "outbound_internal_links": [],
+      "outbound_external_links": [
+        "https://pos.snapscan.io/merchant/api/v1/cash_ups"
+      ],
+      "notes": "GET /cash_ups paginated list of cash up references, ordered by descending date."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#code-snippets",
+      "depth": 1,
+      "title": "Code Snippets",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#overview",
+      "outbound_internal_links": [
+        "https://developer.getsnapscan.com/#javascript",
+        "https://developer.getsnapscan.com/#ruby",
+        "https://developer.getsnapscan.com/#python",
+        "https://developer.getsnapscan.com/#php",
+        "https://developer.getsnapscan.com/#c-35",
+        "https://developer.getsnapscan.com/#java"
+      ],
+      "outbound_external_links": [],
+      "notes": "Language-specific examples for calling the Merchant API using HTTP Basic Auth."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#javascript",
+      "depth": 2,
+      "title": "Javascript",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#code-snippets",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Fetch example showing Basic auth header and GET payments."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#ruby",
+      "depth": 2,
+      "title": "Ruby",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#code-snippets",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Ruby Net::HTTP example for GET payments with Basic auth."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#python",
+      "depth": 2,
+      "title": "Python",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#code-snippets",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "requests + HTTPBasicAuth example for GET payments."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#php",
+      "depth": 2,
+      "title": "PHP",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#code-snippets",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "PHP cURL example for GET payments with Basic auth."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#c-35",
+      "depth": 2,
+      "title": "C#",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#code-snippets",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "C# example for GET payments with Basic auth."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#java",
+      "depth": 2,
+      "title": "Java",
+      "http_status": 200,
+      "content_type": "text/html",
+      "discovered_from_url": "https://developer.getsnapscan.com/#code-snippets",
+      "outbound_internal_links": [],
+      "outbound_external_links": [],
+      "notes": "Java example for GET payments with Basic auth."
+    }
+  ],
+  "skipped_pages": [
+    {
+      "url": "https://developer.getsnapscan.com/#query-parameters",
+      "reason": "Duplicate fragment id later in document (Payments → Get all payments → Query Parameters). Fragment not uniquely addressable; excluded to prevent duplicate URLs."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#http-request",
+      "reason": "Duplicate fragment id later in document (Cash Ups → Create a cash up period → HTTP Request). Fragment not uniquely addressable; excluded to prevent duplicate URLs."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#response-codes",
+      "reason": "Duplicate fragment id later in document (Cash Ups → Create a cash up period → Response Codes). Fragment not uniquely addressable; excluded to prevent duplicate URLs."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#http-request-2",
+      "reason": "Duplicate fragment id later in document (Cash Ups → Get all cash ups → HTTP Request). Fragment not uniquely addressable; excluded to prevent duplicate URLs."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/#response-codes-2",
+      "reason": "Duplicate fragment id later in document (Cash Ups → Get all cash ups → Response Codes). Fragment not uniquely addressable; excluded to prevent duplicate URLs."
+    },
+    {
+      "url": "https://developer.getsnapscan.com/help@snapscan.co.za",
+      "reason": "Malformed email href (not a proper mailto link); treated as non-documentation link."
+    }
+  ],
+  "assets": [
+    {
+      "url": "https://developer.getsnapscan.com/images/favicon.png",
+      "type": "image",
+      "referenced_from_url": "https://developer.getsnapscan.com/#overview"
+    },
+    {
+      "url": "https://developer.getsnapscan.com/images/navbar.png",
+      "type": "image",
+      "referenced_from_url": "https://developer.getsnapscan.com/#overview"
+    },
+    {
+      "url": "https://developer.getsnapscan.com/images/logo.png",
+      "type": "image",
+      "referenced_from_url": "https://developer.getsnapscan.com/#overview"
+    },
+    {
+      "url": "https://developer.getsnapscan.com/stylesheets/screen.css",
+      "type": "other",
+      "referenced_from_url": "https://developer.getsnapscan.com/#overview"
+    },
+    {
+      "url": "https://developer.getsnapscan.com/stylesheets/print.css",
+      "type": "other",
+      "referenced_from_url": "https://developer.getsnapscan.com/#overview"
+    },
+    {
+      "url": "https://developer.getsnapscan.com/javascripts/all.js",
+      "type": "other",
+      "referenced_from_url": "https://developer.getsnapscan.com/#overview"
+    },
+    {
+      "url": "https://pos.snapscan.io/qr/shopalot.svg?id=Ord123&amount=1000&snap_code_size=125",
+      "type": "image",
+      "referenced_from_url": "https://developer.getsnapscan.com/#generating-a-qr-code"
+    }
+  ],
+  "coverage_summary": {
+    "total_pages": 41,
+    "total_internal_links_found": 28,
+    "total_pages_crawled": 41,
+    "total_pages_skipped": 6
+  }
+}
+
