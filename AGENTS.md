@@ -9,7 +9,7 @@
 ## Quick Reference
 
 ### What We're Building
-A mobile-web-first gift pooling platform where party hosts create a "Dream Board" with ONE gift item, share a link with guests, guests contribute money, and when the pot closes, funds convert to a Takealot gift card or a Karri Card top-up. If the gift is fully funded early, guests see a charity overflow view instead of the gift.
+A mobile-web-first gift pooling platform where party hosts create a "Dream Board" with ONE gift item, share a link with guests, guests contribute money, and when the pot closes, funds convert to a Takealot gift card or a Karri Card top-up. If the gift is fully funded early, guests see a charity overflow view instead of the gift. Philanthropy-only Dream Boards (primary charity goal) are in scope by default.
 
 ### Tech Stack
 | Layer | Technology |
@@ -41,49 +41,12 @@ A mobile-web-first gift pooling platform where party hosts create a "Dream Board
 | `SECURITY.md` | Security requirements, POPIA compliance |
 | `NFR-OPERATIONS.md` | Non-functional requirements, operations |
 
+If any documents conflict, `CANONICAL.md` wins.
+
 ---
 
 ## Build Order
-
-Follow this order to build incrementally with testable milestones:
-
-### Phase 1: Foundation + Payments
-1. Initialize Next.js project with TypeScript
-2. Configure Tailwind + shadcn/ui
-3. Set up Drizzle + Neon database
-4. Create database schema (see `DATA.md`)
-5. Set up Vercel environment variables
-6. Implement PayFast ITN flow + hardening
-7. Implement Ozow One API (EFT) redirect flow
-8. Implement SnapScan QR + webhook flow
-
-### Phase 2: Host Flow
-1. Landing page
-2. Magic link authentication
-3. Dream Board creation wizard (4 steps)
-4. Takealot URL parsing
-5. Image upload (Vercel Blob)
-6. Shareable link generation
-7. Host dashboard
-
-### Phase 3: Guest Flow
-1. Public Dream Board view page
-2. Contribution selection UI
-3. Progress bar component
-4. Thank you page (mock)
-
-### Phase 4: Payouts
-1. Pot closure logic
-2. Payout calculation
-3. Admin payout interface (manual V1)
-4. Email delivery of gift card
-
-### Phase 5: Polish
-1. Error handling
-2. Loading states
-3. Mobile optimization
-4. Accessibility audit
-5. Performance optimization
+Use `docs/implementation-docs/CHIPIN-IMPLEMENTATION-PLAN.md` as the single source of truth for phases, gates, and acceptance criteria. No deferrals.
 
 ---
 
@@ -400,28 +363,38 @@ export interface PayFastPaymentParams {
 }
 
 export function createPayFastPayment(params: PayFastPaymentParams): string {
-  const data: Record<string, string> = {
-    merchant_id: process.env.PAYFAST_MERCHANT_ID!,
-    merchant_key: process.env.PAYFAST_MERCHANT_KEY!,
-    return_url: params.returnUrl,
-    cancel_url: params.cancelUrl,
-    notify_url: params.notifyUrl,
-    m_payment_id: params.reference,
-    amount: (params.amountCents / 100).toFixed(2),
-    item_name: params.itemName,
-  };
+  const encodePayfast = (value: string) =>
+    encodeURIComponent(value)
+      .replace(/%20/g, '+')
+      .replace(/%[0-9a-f]{2}/gi, match => match.toUpperCase());
 
-  // Generate signature
-  const paramString = Object.keys(data)
-    .sort()
-    .map(key => `${key}=${encodeURIComponent(data[key])}`)
+  const ordered: Array<[string, string]> = [
+    ['merchant_id', process.env.PAYFAST_MERCHANT_ID!],
+    ['merchant_key', process.env.PAYFAST_MERCHANT_KEY!],
+    ['return_url', params.returnUrl],
+    ['cancel_url', params.cancelUrl],
+    ['notify_url', params.notifyUrl],
+    ['m_payment_id', params.reference],
+    ['amount', (params.amountCents / 100).toFixed(2)],
+    ['item_name', params.itemName],
+  ];
+
+  const paramString = ordered
+    .filter(([, value]) => value !== '')
+    .map(([key, value]) => `${key}=${encodePayfast(value)}`)
     .join('&');
-  
-  const signatureString = `${paramString}&passphrase=${encodeURIComponent(process.env.PAYFAST_PASSPHRASE!)}`;
+
+  const passphrase = process.env.PAYFAST_PASSPHRASE;
+  const signatureString = passphrase
+    ? `${paramString}&passphrase=${encodePayfast(passphrase)}`
+    : paramString;
   const signature = crypto.createHash('md5').update(signatureString).digest('hex');
 
   // Build redirect URL
-  const queryString = new URLSearchParams({ ...data, signature }).toString();
+  const queryString = new URLSearchParams({
+    ...Object.fromEntries(ordered),
+    signature,
+  }).toString();
   return `${PAYFAST_URL}?${queryString}`;
 }
 ```
@@ -433,23 +406,35 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
-  const formData = await request.formData();
+  const rawBody = await request.text();
+  const pairs = rawBody.split('&').filter(Boolean);
   const payload: Record<string, string> = {};
-  formData.forEach((value, key) => {
-    payload[key] = value.toString();
-  });
+  const beforeSignature: string[] = [];
+  let signature = '';
 
-  // Verify signature
-  const { signature, ...data } = payload;
-  const paramString = Object.keys(data)
-    .sort()
-    .map(key => `${key}=${encodeURIComponent(data[key])}`)
-    .join('&');
-  
-  const signatureString = `${paramString}&passphrase=${encodeURIComponent(process.env.PAYFAST_PASSPHRASE!)}`;
+  for (const pair of pairs) {
+    const [rawKey, ...rest] = pair.split('=');
+    if (rawKey === 'signature') {
+      signature = decodeURIComponent(rest.join('=').replace(/\+/g, '%20'));
+      break;
+    }
+    beforeSignature.push(pair);
+    payload[decodeURIComponent(rawKey)] = decodeURIComponent(rest.join('=').replace(/\+/g, '%20'));
+  }
+
+  const encodePayfast = (value: string) =>
+    encodeURIComponent(value)
+      .replace(/%20/g, '+')
+      .replace(/%[0-9a-f]{2}/gi, match => match.toUpperCase());
+
+  const paramString = beforeSignature.join('&');
+  const passphrase = process.env.PAYFAST_PASSPHRASE;
+  const signatureString = passphrase
+    ? `${paramString}&passphrase=${encodePayfast(passphrase)}`
+    : paramString;
   const expectedSignature = crypto.createHash('md5').update(signatureString).digest('hex');
 
-  if (signature !== expectedSignature) {
+  if (!signature || signature !== expectedSignature) {
     console.error('PayFast signature mismatch');
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
@@ -697,11 +682,12 @@ PAYFAST_MERCHANT_KEY=""
 PAYFAST_PASSPHRASE=""
 PAYFAST_SANDBOX="true"
 
-# Ozow (Phase 2)
+# Ozow
+OZOW_CLIENT_ID=""
+OZOW_CLIENT_SECRET=""
 OZOW_SITE_CODE=""
-OZOW_PRIVATE_KEY=""
-OZOW_API_KEY=""
-OZOW_SANDBOX="true"
+OZOW_BASE_URL="https://stagingone.ozow.com/v1"
+OZOW_WEBHOOK_SECRET=""
 
 # SnapScan (Phase 2)
 SNAPSCAN_MERCHANT_ID=""
@@ -1051,4 +1037,4 @@ If requirements are unclear:
 2. Follow the principle of simplicity
 3. When in doubt, implement the minimal version
 
-The goal is a working MVP, not a perfect system. Ship, then iterate.
+Goal: Enterprise-grade, full-scope delivery per implementation plan. No deferrals.
