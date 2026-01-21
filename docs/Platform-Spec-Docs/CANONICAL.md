@@ -1,6 +1,6 @@
 # ChipIn Canonical Spec (Source of Truth)
 
-> **Version:** 1.1.0  
+> **Version:** 1.1.1  
 > **Last Updated:** January 21, 2026  
 > **Status:** Authoritative
 
@@ -43,9 +43,9 @@ Resolve conflicts across docs. When anything disagrees, this file wins.
 
 ### Payments
 
-- **Primary provider:** PayFast.
-- **Optional providers:** Ozow, SnapScan (feature-flagged; not blocking MVP).
-- **Stitch:** under evaluation as all-in-one option.
+- **Phase 1 providers:** PayFast (primary), Ozow (EFT), SnapScan (QR).
+- **PayFast ITN hardening required:** signature verification, source validation, amount check, PayFast validate call, idempotency.
+- **Stitch:** parked until float/settlement/compliance clarified; revisit in Phase 2.
 
 ### Auth and Session Storage
 

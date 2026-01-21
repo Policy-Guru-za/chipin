@@ -2,6 +2,8 @@
 
 These are integration-relevant uncertainties where the PayFast docs do not fully specify operational behaviour.
 
+Status: OPEN (Phase 1). Track and confirm with PayFast before production.
+
 ## Credentials and environments
 - https://developers.payfast.co.za/api#recurring-billing: Does `?testing=true` apply to *all* API endpoints (refunds, transaction history), or only the endpoints explicitly documented?
 - https://developers.payfast.co.za/docs#go_live: Docs note a minimum of ZAR 5.00 for live processing. Is there also a minimum for sandbox, and is the minimum enforced for `recurring_amount` and refunds?

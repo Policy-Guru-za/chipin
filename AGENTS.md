@@ -46,14 +46,17 @@ A mobile-web-first gift pooling platform where party hosts create a "Dream Board
 
 Follow this order to build incrementally with testable milestones:
 
-### Phase 1: Foundation
+### Phase 1: Foundation + Payments
 1. Initialize Next.js project with TypeScript
 2. Configure Tailwind + shadcn/ui
 3. Set up Drizzle + Neon database
 4. Create database schema (see `DATA.md`)
 5. Set up Vercel environment variables
+6. Implement PayFast ITN flow + hardening
+7. Implement Ozow One API (EFT) redirect flow
+8. Implement SnapScan QR + webhook flow
 
-### Phase 2: Host Flow (No Payments)
+### Phase 2: Host Flow
 1. Landing page
 2. Magic link authentication
 3. Dream Board creation wizard (4 steps)
@@ -62,26 +65,19 @@ Follow this order to build incrementally with testable milestones:
 6. Shareable link generation
 7. Host dashboard
 
-### Phase 3: Guest Flow (No Payments)
+### Phase 3: Guest Flow
 1. Public Dream Board view page
 2. Contribution selection UI
 3. Progress bar component
 4. Thank you page (mock)
 
-### Phase 4: Payments
-1. PayFast integration
-2. Webhook handling
-3. Contribution recording
-4. Real-time progress updates
-5. Email notifications
-
-### Phase 5: Payouts
+### Phase 4: Payouts
 1. Pot closure logic
 2. Payout calculation
 3. Admin payout interface (manual V1)
 4. Email delivery of gift card
 
-### Phase 6: Polish
+### Phase 5: Polish
 1. Error handling
 2. Loading states
 3. Mobile optimization

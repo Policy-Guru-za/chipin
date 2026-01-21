@@ -140,21 +140,27 @@ Guest → ChipIn → Redirect → [PayFast Hosted Page] → Process → Redirect
 All provider webhooks verified via signature:
 
 ```typescript
-// PayFast signature verification
-function verifyPayFastSignature(payload: Record<string, string>, signature: string): boolean {
-  const { signature: _, ...data } = payload;
-  const sortedParams = Object.keys(data)
-    .sort()
-    .map(key => `${key}=${encodeURIComponent(data[key])}`)
-    .join('&');
-  
-  const withPassphrase = `${sortedParams}&passphrase=${PASSPHRASE}`;
-  const expectedSignature = crypto.createHash('md5').update(withPassphrase).digest('hex');
-  
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+// PayFast signature verification (raw body, order-preserving)
+function verifyPayFastSignature(rawBody: string): boolean {
+  const pairs = rawBody.split('&').filter(Boolean);
+  const beforeSignature: string[] = [];
+  let signature = '';
+
+  for (const pair of pairs) {
+    const [key, ...rest] = pair.split('=');
+    if (key === 'signature') {
+      signature = decodeURIComponent(rest.join('=').replace(/\+/g, '%20'));
+      break;
+    }
+    beforeSignature.push(pair);
+  }
+
+  const paramString = beforeSignature.join('&');
+  const passphrase = encodeURIComponent(PASSPHRASE).replace(/%20/g, '+').toUpperCase();
+  const finalString = PASSPHRASE ? `${paramString}&passphrase=${passphrase}` : paramString;
+  const expectedSignature = crypto.createHash('md5').update(finalString).digest('hex');
+
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
 }
 ```
 
@@ -232,8 +238,11 @@ function verifyPayFastSignature(payload: Record<string, string>, signature: stri
 ```
 DATABASE_URL
 PAYFAST_PASSPHRASE
-OZOW_PRIVATE_KEY
+OZOW_CLIENT_ID
+OZOW_CLIENT_SECRET
+OZOW_WEBHOOK_SECRET
 SNAPSCAN_API_KEY
+SNAPSCAN_WEBHOOK_AUTH_KEY
 RESEND_API_KEY
 SESSION_SECRET
 ```

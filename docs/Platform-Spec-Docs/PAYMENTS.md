@@ -44,7 +44,9 @@ This architecture:
 - "Pay with EFT" → Ozow (faster than PayFast EFT)
 - "Pay with SnapScan" → SnapScan
 
-**Under Evaluation:** Stitch (potential all-in-one provider). See `docs/payment-docs/STITCH.md`.
+**Phase 1 scope:** PayFast + Ozow (One API, EFT) + SnapScan (QR).
+
+**Stitch:** parked until float/settlement/compliance clarified; revisit in Phase 2. See `docs/payment-docs/STITCH.md`.
 
 ---
 
@@ -274,7 +276,7 @@ import crypto from 'crypto';
 interface PayFastConfig {
   merchantId: string;
   merchantKey: string;
-  passphrase: string;
+  passphrase?: string;
   sandbox: boolean;
 }
 
@@ -282,20 +284,20 @@ class PayFastProvider implements PaymentProvider {
   name = 'payfast';
   
   async createPayment(params: CreatePaymentParams): Promise<PaymentRequest> {
-    const data = {
-      merchant_id: this.config.merchantId,
-      merchant_key: this.config.merchantKey,
-      return_url: params.returnUrl,
-      cancel_url: params.cancelUrl,
-      notify_url: params.notifyUrl,
-      m_payment_id: params.reference,
-      amount: (params.amount / 100).toFixed(2),
-      item_name: params.description,
-      email_address: params.customerEmail,
-    };
+    const ordered: Array<[string, string]> = [
+      ['merchant_id', this.config.merchantId],
+      ['merchant_key', this.config.merchantKey],
+      ['return_url', params.returnUrl],
+      ['cancel_url', params.cancelUrl],
+      ['notify_url', params.notifyUrl],
+      ['email_address', params.customerEmail ?? ''],
+      ['m_payment_id', params.reference],
+      ['amount', (params.amount / 100).toFixed(2)],
+      ['item_name', params.description],
+    ].filter(([, value]) => value !== '');
 
-    const signature = this.generateSignature(data);
-    const queryString = new URLSearchParams({ ...data, signature }).toString();
+    const signature = this.generateSignature(ordered);
+    const formFields = Object.fromEntries([...ordered, ['signature', signature]]);
 
     const baseUrl = this.config.sandbox
       ? 'https://sandbox.payfast.co.za/eng/process'
@@ -303,104 +305,145 @@ class PayFastProvider implements PaymentProvider {
 
     return {
       providerReference: params.reference,
-      redirectUrl: `${baseUrl}?${queryString}`,
+      redirectUrl: baseUrl, // POST form fields to this URL
+      formFields,
     };
   }
 
-  private generateSignature(data: Record<string, string>): string {
-    const sortedData = Object.keys(data)
-      .sort()
-      .map(key => `${key}=${encodeURIComponent(data[key])}`)
-      .join('&');
-    
-    const withPassphrase = `${sortedData}&passphrase=${this.config.passphrase}`;
-    return crypto.createHash('md5').update(withPassphrase).digest('hex');
+  private encodePayfast(value: string): string {
+    return encodeURIComponent(value)
+      .replace(/%20/g, '+')
+      .replace(/%[0-9a-f]{2}/gi, match => match.toUpperCase());
   }
 
-  verifyWebhook(payload: Record<string, string>): boolean {
-    const { signature, ...data } = payload;
-    const expectedSignature = this.generateSignature(data);
+  private generateSignature(ordered: Array<[string, string]>): string {
+    const paramString = ordered
+      .map(([key, value]) => `${key}=${this.encodePayfast(value)}`)
+      .join('&');
+
+    const finalString = this.config.passphrase
+      ? `${paramString}&passphrase=${this.encodePayfast(this.config.passphrase)}`
+      : paramString;
+
+    return crypto.createHash('md5').update(finalString).digest('hex');
+  }
+
+  private parseItn(rawBody: string): { fields: Array<[string, string]>; signature: string | null } {
+    const fields: Array<[string, string]> = [];
+    let signature: string | null = null;
+    for (const pair of rawBody.split('&')) {
+      if (!pair) continue;
+      const [rawKey, ...rest] = pair.split('=');
+      const rawValue = rest.join('=');
+      const key = decodeURIComponent(rawKey);
+      const value = decodeURIComponent(rawValue.replace(/\+/g, '%20'));
+      if (key === 'signature') {
+        signature = value;
+        break;
+      }
+      fields.push([key, value]);
+    }
+    return { fields, signature };
+  }
+
+  verifyWebhook(rawBody: string): boolean {
+    const { fields, signature } = this.parseItn(rawBody);
+    if (!signature) return false;
+    const expectedSignature = this.generateSignature(fields);
     return signature === expectedSignature;
   }
 }
 ```
 
+**PayFast ITN hardening (required):**
+- Verify signature from **raw** ITN body (not parsed/reordered fields).
+- Validate source (PayFast domains/IPs) and compare expected amount.
+- POST back to PayFast `/eng/query/validate` and require `VALID`.
+- Process idempotently keyed by `pf_payment_id`.
+- Unresolved PayFast doc gaps tracked in `docs/payment-docs/payfast-open-questions.md`.
+
 ### Ozow Integration
 
 **Environment Variables:**
 ```
+OZOW_CLIENT_ID=xxx
+OZOW_CLIENT_SECRET=xxx
 OZOW_SITE_CODE=xxx
-OZOW_PRIVATE_KEY=xxx
-OZOW_API_KEY=xxx
-OZOW_SANDBOX=false
+OZOW_BASE_URL=https://one.ozow.com/v1
+OZOW_WEBHOOK_SECRET=xxx
 ```
 
 **Create Payment:**
 ```typescript
+import crypto from 'crypto';
+
+interface OzowConfig {
+  clientId: string;
+  clientSecret: string;
+  siteCode: string;
+  baseUrl: string;
+}
+
 class OzowProvider implements PaymentProvider {
   name = 'ozow';
 
   async createPayment(params: CreatePaymentParams): Promise<PaymentRequest> {
-    const data = {
-      SiteCode: this.config.siteCode,
-      CountryCode: 'ZA',
-      CurrencyCode: 'ZAR',
-      Amount: (params.amount / 100).toFixed(2),
-      TransactionReference: params.reference,
-      BankReference: params.reference,
-      Optional1: '',
-      Optional2: '',
-      Optional3: '',
-      Optional4: '',
-      Optional5: '',
-      Customer: params.customerEmail || '',
-      CancelUrl: params.cancelUrl,
-      ErrorUrl: params.cancelUrl,
-      SuccessUrl: params.returnUrl,
-      NotifyUrl: params.notifyUrl,
-      IsTest: this.config.sandbox,
-    };
+    const accessToken = await this.getAccessToken('payment');
+    const response = await fetch(`${this.config.baseUrl}/payments`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        siteCode: this.config.siteCode,
+        amount: { currency: 'ZAR', value: Number((params.amount / 100).toFixed(2)) },
+        merchantReference: params.reference,
+        returnUrl: params.returnUrl,
+        expireAt: params.expireAt ?? new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
+    });
 
-    const hashSource = [
-      data.SiteCode,
-      data.CountryCode,
-      data.CurrencyCode,
-      data.Amount,
-      data.TransactionReference,
-      data.BankReference,
-      data.CancelUrl,
-      data.ErrorUrl,
-      data.SuccessUrl,
-      data.NotifyUrl,
-      data.IsTest,
-      this.config.privateKey,
-    ].join('');
-
-    const hash = crypto
-      .createHash('sha512')
-      .update(hashSource.toLowerCase())
-      .digest('hex');
-
-    // Ozow uses POST to their endpoint
-    const baseUrl = this.config.sandbox
-      ? 'https://pay.ozow.com'
-      : 'https://pay.ozow.com';
+    const data = await response.json();
 
     return {
-      providerReference: params.reference,
-      redirectUrl: baseUrl,
-      postData: { ...data, HashCheck: hash },
+      providerReference: data.id,
+      redirectUrl: data.redirectUrl,
     };
+  }
+
+  private async getAccessToken(scope: string): Promise<string> {
+    const body = new URLSearchParams({
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
+      scope,
+      grant_type: 'client_credentials',
+    });
+
+    const response = await fetch(`${this.config.baseUrl}/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+
+    const json = await response.json();
+    return json.access_token;
   }
 }
 ```
+
+**Ozow webhook handling (required):**
+- Verify Svix signature (`svix-id`, `svix-timestamp`, `svix-signature`) with the webhook secret.
+- Treat `returnUrl` params as untrusted; reconcile via webhooks or `GET /transactions/{id}`.
 
 ### SnapScan Integration
 
 **Environment Variables:**
 ```
-SNAPSCAN_MERCHANT_ID=xxx
+SNAPSCAN_SNAPCODE=xxx
 SNAPSCAN_API_KEY=xxx
+SNAPSCAN_WEBHOOK_AUTH_KEY=xxx
 ```
 
 **Create Payment:**
@@ -409,30 +452,30 @@ class SnapScanProvider implements PaymentProvider {
   name = 'snapscan';
 
   async createPayment(params: CreatePaymentParams): Promise<PaymentRequest> {
-    // SnapScan uses a different flow - generate QR code
-    const response = await fetch('https://pos.snapscan.io/merchant/api/v1/payments', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${Buffer.from(this.config.apiKey + ':').toString('base64')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: params.amount, // In cents
-        merchantReference: params.reference,
-        snapCode: this.config.merchantId,
-      }),
-    });
+    const qrUrl = new URL(`https://pos.snapscan.io/qr/${this.config.snapCode}`);
+    qrUrl.searchParams.set('id', params.reference);
+    qrUrl.searchParams.set('amount', String(params.amount)); // cents
+    qrUrl.searchParams.set('strict', 'true');
 
-    const { id, qrCodeUrl } = await response.json();
+    const qrImageUrl = new URL(`https://pos.snapscan.io/qr/${this.config.snapCode}.svg`);
+    qrImageUrl.searchParams.set('id', params.reference);
+    qrImageUrl.searchParams.set('amount', String(params.amount));
+    qrImageUrl.searchParams.set('strict', 'true');
+    qrImageUrl.searchParams.set('snap_code_size', '200');
 
     return {
-      providerReference: id,
-      redirectUrl: qrCodeUrl, // Actually a QR code URL
+      providerReference: params.reference,
+      redirectUrl: qrUrl.toString(), // QR URL (render or deep link)
+      qrImageUrl: qrImageUrl.toString(),
       isQrCode: true,
     };
   }
 }
 ```
+
+**SnapScan webhook handling (required):**
+- Verify `Authorization: SnapScan signature=...` using HMAC-SHA256 over the raw body.
+- Parse `application/x-www-form-urlencoded` body and JSON-decode the `payload` field.
 
 ---
 
@@ -704,11 +747,11 @@ async function dailyReconciliation(): Promise<void> {
 
 ### Test Banks (Ozow Sandbox)
 
-Select "Test Bank" in sandbox environment to simulate instant EFT.
+Use the Ozow staging environment (`https://stagingone.ozow.com/v1`) and staging dashboard credentials to simulate EFT flows.
 
 ### SnapScan Sandbox
 
-Use SnapScan test app to scan QR codes in sandbox mode.
+No sandbox environment is documented. Use controlled live testing with low-value transactions and confirm access with SnapScan.
 
 ---
 
@@ -722,14 +765,15 @@ PAYFAST_PASSPHRASE=your_passphrase
 PAYFAST_SANDBOX=true
 
 # Ozow
-OZOW_SITE_CODE=ABC-ABC-ABC
-OZOW_PRIVATE_KEY=your_private_key
-OZOW_API_KEY=your_api_key
-OZOW_SANDBOX=true
+OZOW_CLIENT_ID=your_client_id
+OZOW_CLIENT_SECRET=your_client_secret
+OZOW_SITE_CODE=your_site_code
+OZOW_BASE_URL=https://stagingone.ozow.com/v1
 
 # SnapScan
-SNAPSCAN_MERCHANT_ID=your_merchant_id
+SNAPSCAN_SNAPCODE=your_snapcode
 SNAPSCAN_API_KEY=your_api_key
+SNAPSCAN_WEBHOOK_AUTH_KEY=your_webhook_auth_key
 
 # ChipIn
 CHIPIN_FEE_PERCENTAGE=0.03

@@ -80,7 +80,7 @@
 ### In Scope
 - ✅ Dream Board creation with Takealot URL
 - ✅ Magic link authentication
-- ✅ Guest contribution via PayFast
+- ✅ Guest contribution via PayFast, Ozow (EFT), SnapScan (QR)
 - ✅ Optional payout method: Fund my Karri Card
 - ✅ Charity overflow selection (used when gift is fully funded)
 - ✅ Progress tracking
@@ -88,7 +88,6 @@
 - ✅ Takealot gift card or Karri top-up payout (manual process OK)
 
 ### Out of Scope (Post-MVP)
-- ❌ Ozow / SnapScan (feature-flagged; can ship after PayFast)
 - ❌ Primary philanthropy-only Dream Boards (charity overflow is in-scope)
 - ❌ Karri Card API automation (manual top-up OK for MVP)
 - ❌ Partner API program
