@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { db } from './index';
-import { hosts } from './schema';
+import { dreamBoards, hosts } from './schema';
 
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
@@ -39,4 +39,23 @@ export async function ensureHostForEmail(email: string) {
   }
 
   return created;
+}
+
+export async function getDreamBoardById(id: string, hostId: string) {
+  const [board] = await db
+    .select({
+      id: dreamBoards.id,
+      slug: dreamBoards.slug,
+      childName: dreamBoards.childName,
+      childPhotoUrl: dreamBoards.childPhotoUrl,
+      giftData: dreamBoards.giftData,
+      goalCents: dreamBoards.goalCents,
+      status: dreamBoards.status,
+      deadline: dreamBoards.deadline,
+    })
+    .from(dreamBoards)
+    .where(and(eq(dreamBoards.id, id), eq(dreamBoards.hostId, hostId)))
+    .limit(1);
+
+  return board ?? null;
 }

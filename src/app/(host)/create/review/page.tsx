@@ -1,12 +1,126 @@
+import Image from 'next/image';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { requireSession } from '@/lib/auth/session';
+import { clearDreamBoardDraft, getDreamBoardDraft } from '@/lib/dream-boards/draft';
+import { dreamBoardDraftSchema } from '@/lib/dream-boards/schema';
+import { generateSlug } from '@/lib/utils/slug';
+import { db } from '@/lib/db';
+import { dreamBoards } from '@/lib/db/schema';
+
+async function createDreamBoardAction() {
+  'use server';
+
+  const session = await requireSession();
+  const draft = await getDreamBoardDraft(session.hostId);
+  const parsed = dreamBoardDraftSchema.safeParse(draft);
+
+  if (!parsed.success) {
+    redirect('/create');
+  }
+
+  const slug = generateSlug(parsed.data.childName);
+  const [created] = await db
+    .insert(dreamBoards)
+    .values({
+      hostId: session.hostId,
+      slug,
+      childName: parsed.data.childName,
+      childPhotoUrl: parsed.data.childPhotoUrl,
+      birthdayDate: parsed.data.birthdayDate,
+      giftType: parsed.data.giftType,
+      giftData: parsed.data.giftData,
+      goalCents: parsed.data.goalCents,
+      payoutMethod: parsed.data.payoutMethod,
+      overflowGiftData: parsed.data.overflowGiftData,
+      message: parsed.data.message,
+      deadline: new Date(parsed.data.deadline),
+      status: 'active',
+      payoutEmail: parsed.data.payoutEmail,
+    })
+    .returning({ id: dreamBoards.id });
+
+  await clearDreamBoardDraft(session.hostId);
+  redirect(`/dashboard/${created.id}`);
+}
 
 export default async function CreateReviewPage() {
-  await requireSession();
+  const session = await requireSession();
+  const draft = await getDreamBoardDraft(session.hostId);
+  if (!draft?.giftType) {
+    redirect('/create/gift');
+  }
+  if (!draft?.payoutEmail || !draft?.deadline) {
+    redirect('/create/details');
+  }
+
+  const parsed = dreamBoardDraftSchema.safeParse(draft);
+  if (!parsed.success) {
+    redirect('/create');
+  }
+
+  const giftTitle =
+    parsed.data.giftData.type === 'takealot_product'
+      ? parsed.data.giftData.productName
+      : parsed.data.giftData.causeName;
 
   return (
-    <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 py-12">
-      <h1 className="text-3xl font-display text-text">Review & create</h1>
-      <p className="text-text-muted">Review step coming next.</p>
+    <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
+          Step 4 of 4
+        </p>
+        <h1 className="text-3xl font-display text-text">Review your Dream Board</h1>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Guest preview</CardTitle>
+          <CardDescription>This is what guests will see.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="rounded-3xl border border-border bg-subtle p-6">
+            <div className="flex items-center gap-4">
+              <Image
+                src={parsed.data.childPhotoUrl}
+                alt={`${parsed.data.childName} photo`}
+                width={96}
+                height={96}
+                className="h-24 w-24 rounded-full object-cover"
+              />
+              <div>
+                <p className="text-xl font-display text-text">{parsed.data.childName}&apos;s Dream Gift</p>
+                <p className="text-sm text-text-muted">{giftTitle}</p>
+              </div>
+            </div>
+            <div className="mt-4 text-sm text-text">
+              Goal: R{(parsed.data.goalCents / 100).toFixed(2)}
+            </div>
+            {parsed.data.message ? (
+              <p className="mt-3 text-sm text-text-muted">“{parsed.data.message}”</p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap gap-4 text-sm text-text">
+            <Link href="/create/child" className="underline">
+              Edit child details
+            </Link>
+            <Link href="/create/gift" className="underline">
+              Edit gift
+            </Link>
+            <Link href="/create/details" className="underline">
+              Edit payout details
+            </Link>
+          </div>
+
+          <form action={createDreamBoardAction}>
+            <Button type="submit">Create Dream Board</Button>
+          </form>
+        </CardContent>
+      </Card>
     </section>
   );
 }
