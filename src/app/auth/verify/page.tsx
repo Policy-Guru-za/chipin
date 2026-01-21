@@ -32,7 +32,7 @@ export default async function VerifyPage({
             <CardDescription>We couldn’t find a valid login token.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/auth/login" className="font-semibold text-text">
+            <Link href="/create" className="font-semibold text-text">
               Request a new link →
             </Link>
           </CardContent>
