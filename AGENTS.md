@@ -39,6 +39,7 @@ A mobile-web-first gift pooling platform where party hosts create a "Dream Board
 | `INTEGRATIONS.md` | Takealot, email, storage integrations |
 | `UX.md` | Design system, components, screen specs |
 | `SECURITY.md` | Security requirements, POPIA compliance |
+| `NFR-OPERATIONS.md` | Non-functional requirements, operations |
 
 ---
 

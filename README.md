@@ -45,6 +45,7 @@
 | [`docs/Platform-Spec-Docs/INTEGRATIONS.md`](./docs/Platform-Spec-Docs/INTEGRATIONS.md) | Third-party services overview | External integrations |
 | [`docs/Platform-Spec-Docs/UX.md`](./docs/Platform-Spec-Docs/UX.md) | Design system, components, screens | Building UI |
 | [`docs/Platform-Spec-Docs/SECURITY.md`](./docs/Platform-Spec-Docs/SECURITY.md) | Security & POPIA requirements | Security implementation |
+| [`docs/Platform-Spec-Docs/NFR-OPERATIONS.md`](./docs/Platform-Spec-Docs/NFR-OPERATIONS.md) | Non-functional requirements | SLOs + ops |
 | [`AGENTS.md`](./AGENTS.md) | AI coding agent instructions | **READ FIRST** |
 
 ### Integration Specs
