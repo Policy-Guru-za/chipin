@@ -6,6 +6,7 @@ import {
   parseOzowAmountCents,
   verifyOzowWebhook,
 } from '@/lib/payments/ozow';
+import { enforceRateLimit } from '@/lib/auth/rate-limit';
 import {
   getContributionByPaymentRef,
   markDreamBoardFundedIfNeeded,
@@ -13,9 +14,26 @@ import {
 } from '@/lib/db/queries';
 import { log } from '@/lib/observability/logger';
 
+const getClientIp = (request: NextRequest) =>
+  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const requestId = request.headers.get('x-request-id') ?? undefined;
+  const ip = getClientIp(request);
+
+  const rateLimit = await enforceRateLimit(`webhook:ozow:${ip ?? 'unknown'}`, {
+    limit: 120,
+    windowSeconds: 60,
+  });
+
+  if (!rateLimit.allowed) {
+    log('warn', 'payments.ozow_rate_limited', { ip }, requestId);
+    return NextResponse.json(
+      { error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds },
+      { status: 429 }
+    );
+  }
 
   const payload = verifyOzowWebhook(rawBody, request.headers);
   if (!payload) {

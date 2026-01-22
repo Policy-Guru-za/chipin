@@ -183,6 +183,7 @@ function verifyPayFastSignature(rawBody: string): boolean {
 | Child photo | Contract | Board lifetime + 90 days | Deleted |
 | Contributor name | Legitimate interest | Board lifetime + 90 days | Anonymized |
 | IP address | Legitimate interest | 30 days | Auto-deleted |
+| User agent | Legitimate interest | 30 days | Auto-deleted |
 | Payment refs | Legal requirement | 7 years | Per regulation |
 
 ### Subject Rights Implementation

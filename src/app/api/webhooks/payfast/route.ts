@@ -9,6 +9,8 @@ import {
   validatePayfastSource,
   verifyPayfastSignature,
 } from '@/lib/payments/payfast';
+import { enforceRateLimit } from '@/lib/auth/rate-limit';
+import { extractTimestampValue, validateWebhookTimestamp } from '@/lib/payments/webhook-utils';
 import {
   getContributionByPaymentRef,
   markDreamBoardFundedIfNeeded,
@@ -22,22 +24,29 @@ const getClientIp = (request: NextRequest) =>
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const requestId = request.headers.get('x-request-id') ?? undefined;
+  const ip = getClientIp(request);
+
+  const rateLimit = await enforceRateLimit(`webhook:payfast:${ip ?? 'unknown'}`, {
+    limit: 120,
+    windowSeconds: 60,
+  });
+
+  if (!rateLimit.allowed) {
+    log('warn', 'payments.payfast_rate_limited', { ip }, requestId);
+    return NextResponse.json(
+      { error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds },
+      { status: 429 }
+    );
+  }
 
   if (!verifyPayfastSignature(rawBody)) {
     log('warn', 'payments.payfast_invalid_signature', undefined, requestId);
     return NextResponse.json({ error: 'invalid_signature' }, { status: 400 });
   }
 
-  const ip = getClientIp(request);
   if (process.env.NODE_ENV === 'production' && !validatePayfastSource(ip)) {
     log('warn', 'payments.payfast_invalid_source', { ip }, requestId);
     return NextResponse.json({ error: 'invalid_source' }, { status: 403 });
-  }
-
-  const validated = await validatePayfastItn(rawBody);
-  if (!validated) {
-    log('warn', 'payments.payfast_validation_failed', undefined, requestId);
-    return NextResponse.json({ error: 'invalid_itn' }, { status: 400 });
   }
 
   const { payload } = parsePayfastBody(rawBody);
@@ -53,6 +62,33 @@ export async function POST(request: NextRequest) {
       requestId
     );
     return NextResponse.json({ error: 'invalid_merchant' }, { status: 400 });
+  }
+
+  const timestampValue = extractTimestampValue(payload, ['timestamp', 'payment_date']);
+  if (timestampValue) {
+    const timestampResult = validateWebhookTimestamp(timestampValue);
+    if (!timestampResult.ok) {
+      log(
+        'warn',
+        'payments.payfast_invalid_timestamp',
+        { reason: timestampResult.reason, paymentRef: payload['m_payment_id'] },
+        requestId
+      );
+      return NextResponse.json({ error: 'invalid_timestamp' }, { status: 400 });
+    }
+  } else {
+    log(
+      'warn',
+      'payments.payfast_timestamp_missing',
+      { paymentRef: payload['m_payment_id'] },
+      requestId
+    );
+  }
+
+  const validated = await validatePayfastItn(rawBody);
+  if (!validated) {
+    log('warn', 'payments.payfast_validation_failed', undefined, requestId);
+    return NextResponse.json({ error: 'invalid_itn' }, { status: 400 });
   }
 
   const pfPaymentId = payload['pf_payment_id'];

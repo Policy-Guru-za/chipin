@@ -28,6 +28,15 @@ const loadHandler = async () => {
   return import('@/app/api/webhooks/payfast/route');
 };
 
+const mockRateLimit = (allowed: boolean) => {
+  vi.doMock('@/lib/auth/rate-limit', () => ({
+    enforceRateLimit: vi.fn(async () => ({
+      allowed,
+      retryAfterSeconds: allowed ? undefined : 120,
+    })),
+  }));
+};
+
 describe('PayFast webhook integration', () => {
   const originalEnv = {
     PAYFAST_MERCHANT_ID: process.env.PAYFAST_MERCHANT_ID,
@@ -43,6 +52,7 @@ describe('PayFast webhook integration', () => {
     process.env.PAYFAST_PASSPHRASE = originalEnv.PAYFAST_PASSPHRASE;
     process.env.PAYFAST_SANDBOX = originalEnv.PAYFAST_SANDBOX;
     process.env.NODE_ENV = originalEnv.NODE_ENV;
+    vi.unmock('@/lib/auth/rate-limit');
     vi.unmock('@/lib/db/queries');
     vi.unmock('@/lib/payments/payfast');
     vi.clearAllMocks();
@@ -55,6 +65,92 @@ describe('PayFast webhook integration', () => {
     process.env.PAYFAST_PASSPHRASE = 'test-passphrase';
     process.env.PAYFAST_SANDBOX = 'true';
     process.env.NODE_ENV = 'test';
+    mockRateLimit(true);
+
+    const contribution = {
+      id: 'contrib-1',
+      dreamBoardId: 'board-1',
+      amountCents: 5000,
+      feeCents: 250,
+      paymentStatus: 'pending',
+    };
+
+    const getContributionByPaymentRef = vi.fn(async () => contribution);
+    const updateContributionStatus = vi.fn(async () => undefined);
+    const markDreamBoardFundedIfNeeded = vi.fn(async () => undefined);
+
+    vi.doMock('@/lib/db/queries', () => ({
+      getContributionByPaymentRef,
+      updateContributionStatus,
+      markDreamBoardFundedIfNeeded,
+    }));
+
+    vi.doMock('@/lib/payments/payfast', async () => {
+      const actual =
+        await vi.importActual<typeof import('@/lib/payments/payfast')>('@/lib/payments/payfast');
+      return {
+        ...actual,
+        validatePayfastItn: vi.fn(async () => true),
+      };
+    });
+
+    const fields: Array<[string, string]> = [
+      ['merchant_id', process.env.PAYFAST_MERCHANT_ID],
+      ['merchant_key', process.env.PAYFAST_MERCHANT_KEY],
+      ['m_payment_id', 'pay-123'],
+      ['pf_payment_id', 'pf-456'],
+      ['payment_status', 'COMPLETE'],
+      ['timestamp', new Date().toISOString()],
+      ['amount_gross', '52.50'],
+    ];
+
+    const rawBody = buildItnBody(fields, process.env.PAYFAST_PASSPHRASE);
+    const { POST } = await loadHandler();
+    const response = await POST(
+      new Request('http://localhost/api/webhooks/payfast', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          'x-real-ip': '197.97.145.144',
+        },
+        body: rawBody,
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.received).toBe(true);
+
+    expect(getContributionByPaymentRef).toHaveBeenCalledWith('payfast', 'pay-123');
+    expect(updateContributionStatus).toHaveBeenCalledWith('contrib-1', 'completed');
+    expect(markDreamBoardFundedIfNeeded).toHaveBeenCalledWith('board-1');
+  });
+
+  it('rejects requests when rate limited', async () => {
+    mockRateLimit(false);
+
+    const { POST } = await loadHandler();
+    const response = await POST(
+      new Request('http://localhost/api/webhooks/payfast', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          'x-real-ip': '197.97.145.144',
+        },
+        body: '',
+      })
+    );
+
+    expect(response.status).toBe(429);
+  });
+
+  it('accepts payloads without a timestamp', async () => {
+    process.env.PAYFAST_MERCHANT_ID = '10000100';
+    process.env.PAYFAST_MERCHANT_KEY = '46f0cd694581a';
+    process.env.PAYFAST_PASSPHRASE = 'test-passphrase';
+    process.env.PAYFAST_SANDBOX = 'true';
+    process.env.NODE_ENV = 'test';
+    mockRateLimit(true);
 
     const contribution = {
       id: 'contrib-1',
@@ -106,11 +202,5 @@ describe('PayFast webhook integration', () => {
     );
 
     expect(response.status).toBe(200);
-    const payload = await response.json();
-    expect(payload.received).toBe(true);
-
-    expect(getContributionByPaymentRef).toHaveBeenCalledWith('payfast', 'pay-123');
-    expect(updateContributionStatus).toHaveBeenCalledWith('contrib-1', 'completed');
-    expect(markDreamBoardFundedIfNeeded).toHaveBeenCalledWith('board-1');
   });
 });

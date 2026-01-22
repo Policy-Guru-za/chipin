@@ -5,8 +5,18 @@ const loadHandler = async () => {
   return import('@/app/api/webhooks/ozow/route');
 };
 
+const mockRateLimit = (allowed: boolean) => {
+  vi.doMock('@/lib/auth/rate-limit', () => ({
+    enforceRateLimit: vi.fn(async () => ({
+      allowed,
+      retryAfterSeconds: allowed ? undefined : 120,
+    })),
+  }));
+};
+
 describe('Ozow webhook integration', () => {
   afterEach(() => {
+    vi.unmock('@/lib/auth/rate-limit');
     vi.unmock('@/lib/db/queries');
     vi.unmock('@/lib/payments/ozow');
     vi.clearAllMocks();
@@ -21,6 +31,8 @@ describe('Ozow webhook integration', () => {
       feeCents: 250,
       paymentStatus: 'pending',
     };
+
+    mockRateLimit(true);
 
     const getContributionByPaymentRef = vi.fn(async () => contribution);
     const updateContributionStatus = vi.fn(async () => undefined);
@@ -74,6 +86,8 @@ describe('Ozow webhook integration', () => {
       paymentStatus: 'pending',
     };
 
+    mockRateLimit(true);
+
     const getContributionByPaymentRef = vi.fn(async () => contribution);
     const updateContributionStatus = vi.fn(async () => undefined);
     const markDreamBoardFundedIfNeeded = vi.fn(async () => undefined);
@@ -110,5 +124,20 @@ describe('Ozow webhook integration', () => {
     expect(response.status).toBe(400);
     expect(updateContributionStatus).not.toHaveBeenCalled();
     expect(markDreamBoardFundedIfNeeded).not.toHaveBeenCalled();
+  });
+
+  it('rejects requests when rate limited', async () => {
+    mockRateLimit(false);
+
+    const { POST } = await loadHandler();
+    const response = await POST(
+      new Request('http://localhost/api/webhooks/ozow', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+    );
+
+    expect(response.status).toBe(429);
   });
 });
