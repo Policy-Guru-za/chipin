@@ -1,39 +1,115 @@
 version: 2
+
 updates:
   - package-ecosystem: 'npm'
     directory: '/'
     schedule:
       interval: 'weekly'
       day: 'monday'
-    open-pull-requests-limit: 5
-    labels:
-      - 'dependencies'
+    open-pull-requests-limit: 10
+    labels: ['dependencies']
     commit-message:
       prefix: 'chore(deps)'
+
+    # 1) Hard rule: majors should not be grouped.
+    # Dependabot can't directly say "group only minor/patch", so we do this by:
+    # - keeping groups narrow (domain-based)
+    # - and adding ignore blocks for known high-blast-radius majors you want to control manually.
+    #
+    # If you want majors automated later, remove those ignores.
+
+    ignore:
+      # Avoid Node-types mismatches with your Node 20 engines
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+
+      # High blast-radius majors: manage deliberately in isolated PRs
+      - dependency-name: 'zod'
+        update-types: ['version-update:semver-major']
+
+      - dependency-name: 'tailwindcss'
+        update-types: ['version-update:semver-major']
+
+      - dependency-name: 'drizzle-orm'
+        update-types: ['version-update:semver-major']
+
+      - dependency-name: 'drizzle-kit'
+        update-types: ['version-update:semver-major']
+
+      - dependency-name: '@opentelemetry/*'
+        update-types: ['version-update:semver-major']
+
+      - dependency-name: '@vercel/kv'
+        update-types: ['version-update:semver-major']
+
+      - dependency-name: '@vercel/blob'
+        update-types: ['version-update:semver-major']
+
     groups:
-      production-dependencies:
-        dependency-type: 'production'
+      # --- Production domains (narrow, reviewable) ---
+
+      observability:
         patterns:
-          - '*'
-        exclude-patterns:
+          - '@opentelemetry/*'
+
+      data-layer:
+        patterns:
+          - 'drizzle-orm'
+          - 'drizzle-kit'
+          - '@neondatabase/*'
+
+      vercel-runtime:
+        patterns:
+          - '@vercel/kv'
+          - '@vercel/blob'
+
+      email:
+        patterns:
+          - 'resend'
+
+      ui-utils:
+        patterns:
+          - 'tailwind-merge'
+
+      validation:
+        patterns:
+          - 'zod'
+
+      # --- Dev/tooling domains (avoid dumping everything together) ---
+
+      types:
+        patterns:
           - '@types/*'
+
+      linting:
+        patterns:
           - 'eslint*'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - '@typescript-eslint/*'
+
+      formatting:
+        patterns:
           - 'prettier'
+          - 'prettier-*'
+
+      testing:
+        patterns:
           - 'vitest'
+          - '@vitest/*'
+          - 'jsdom'
+          - '@testing-library/*'
+
+      git-hooks:
+        patterns:
           - 'husky'
           - 'lint-staged'
-      dev-dependencies:
-        dependency-type: 'development'
-        patterns:
-          - '*'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'weekly'
       day: 'monday'
-    labels:
-      - 'dependencies'
-      - 'github-actions'
+    labels: ['dependencies', 'github-actions']
     commit-message:
       prefix: 'ci(deps)'
