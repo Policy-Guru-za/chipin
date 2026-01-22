@@ -50,6 +50,13 @@ Use `docs/implementation-docs/CHIPIN-IMPLEMENTATION-PLAN.md` as the single sourc
 
 ---
 
+## Backlog Tracking (Required)
+- Maintain `BACKLOG.md` at the repo root for deferred items and blockers.
+- At the end of each coding cycle, add any newly discovered follow-ups to `BACKLOG.md`.
+- **Before every commit**, ensure all outstanding deferred items are recorded in `BACKLOG.md` with owner/status/ETA.
+
+---
+
 ## Code Standards
 
 ### TypeScript
