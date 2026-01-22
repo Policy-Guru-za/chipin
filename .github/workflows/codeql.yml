@@ -18,6 +18,9 @@ jobs:
     env:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
     steps:
+      - name: Enable Corepack
+        run: corepack enable && corepack prepare pnpm@10.14.0 --activate
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -26,9 +29,6 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-
-      - name: Enable Corepack
-        run: corepack enable
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
