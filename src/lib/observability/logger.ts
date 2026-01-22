@@ -36,8 +36,5 @@ export const log = (
   }
 };
 
-export const logInfo = (
-  message: string,
-  data?: Record<string, unknown>,
-  requestId?: string
-) => log('info', message, data, requestId);
+export const logInfo = (message: string, data?: Record<string, unknown>, requestId?: string) =>
+  log('info', message, data, requestId);

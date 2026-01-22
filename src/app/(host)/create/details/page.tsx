@@ -99,7 +99,9 @@ export default async function CreateDetailsPage({
       <Card>
         <CardHeader>
           <CardTitle>Payout & final details</CardTitle>
-          <CardDescription>We’ll send the payout to this email when the pot closes.</CardDescription>
+          <CardDescription>
+            We’ll send the payout to this email when the pot closes.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {error === 'invalid' ? (
@@ -182,7 +184,13 @@ export default async function CreateDetailsPage({
               <label htmlFor="deadline" className="text-sm font-medium text-text">
                 Contribution deadline
               </label>
-              <Input id="deadline" name="deadline" type="date" required defaultValue={defaultDeadline} />
+              <Input
+                id="deadline"
+                name="deadline"
+                type="date"
+                required
+                defaultValue={defaultDeadline}
+              />
             </div>
 
             <Button type="submit">Review & create</Button>

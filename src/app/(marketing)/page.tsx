@@ -46,9 +46,7 @@ export default function MarketingPage() {
             </div>
             <div className="rounded-2xl border border-border bg-surface p-4">
               <p className="text-sm font-semibold text-text">2. Share with guests</p>
-              <p className="text-sm text-text-muted">
-                Guests contribute in a few taps on mobile.
-              </p>
+              <p className="text-sm text-text-muted">Guests contribute in a few taps on mobile.</p>
             </div>
             <div className="rounded-2xl border border-border bg-surface p-4">
               <p className="text-sm font-semibold text-text">3. Celebrate</p>

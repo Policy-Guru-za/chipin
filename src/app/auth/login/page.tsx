@@ -2,11 +2,7 @@ import { redirect } from 'next/navigation';
 
 type LoginSearchParams = Record<string, string | string[] | undefined>;
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams?: LoginSearchParams;
-}) {
+export default function LoginPage({ searchParams }: { searchParams?: LoginSearchParams }) {
   const params = new URLSearchParams();
 
   if (searchParams) {

@@ -15,11 +15,7 @@ type VerifySearchParams = {
   token?: string | string[];
 };
 
-export default async function VerifyPage({
-  searchParams,
-}: {
-  searchParams?: VerifySearchParams;
-}) {
+export default async function VerifyPage({ searchParams }: { searchParams?: VerifySearchParams }) {
   const tokenParam = searchParams?.token;
   const token = Array.isArray(tokenParam) ? tokenParam[0] : tokenParam;
 

@@ -671,7 +671,7 @@ Create `.env.example`:
 
 ```bash
 # Database
-DATABASE_URL="postgresql://..."
+DATABASE_URL="postgresql://"
 
 # Auth
 SESSION_SECRET="generate-a-random-32-byte-string"
@@ -689,12 +689,32 @@ OZOW_SITE_CODE=""
 OZOW_BASE_URL="https://stagingone.ozow.com/v1"
 OZOW_WEBHOOK_SECRET=""
 
-# SnapScan (Phase 2)
-SNAPSCAN_MERCHANT_ID=""
+# SnapScan
+SNAPSCAN_SNAPCODE=""
 SNAPSCAN_API_KEY=""
+SNAPSCAN_WEBHOOK_AUTH_KEY=""
 
 # Email
 RESEND_API_KEY=""
+RESEND_FROM_EMAIL="noreply@chipin.co.za"
+RESEND_FROM_NAME="ChipIn"
+
+# Vercel KV
+KV_REST_API_URL=""
+KV_REST_API_TOKEN=""
+KV_REST_API_READ_ONLY_TOKEN=""
+
+# Observability
+SENTRY_DSN=""
+NEXT_PUBLIC_SENTRY_DSN=""
+SENTRY_ENVIRONMENT="development"
+SENTRY_TRACES_SAMPLE_RATE="0.1"
+OTEL_EXPORTER_OTLP_ENDPOINT=""
+OTEL_EXPORTER_OTLP_HEADERS=""
+OTEL_SERVICE_NAME="chipin"
+
+# Vercel Blob
+BLOB_READ_WRITE_TOKEN=""
 
 # App
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -714,6 +734,12 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 - Database operations
 - API endpoints
 - Webhook handling
+- Health endpoints (`/health/live`, `/health/ready`)
+
+### Quality Gates
+- Coverage: `pnpm test:coverage` (CI)
+- Dead code/deps: `pnpm knip` (CI)
+- See `TESTING.md` for details and exclusions
 
 ### E2E Tests (Playwright)
 - Complete host flow

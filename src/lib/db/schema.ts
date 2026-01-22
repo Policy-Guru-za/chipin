@@ -42,11 +42,7 @@ export const paymentStatusEnum = pgEnum('payment_status', [
   'refunded',
 ]);
 
-export const paymentProviderEnum = pgEnum('payment_provider', [
-  'payfast',
-  'ozow',
-  'snapscan',
-]);
+export const paymentProviderEnum = pgEnum('payment_provider', ['payfast', 'ozow', 'snapscan']);
 
 export const payoutStatusEnum = pgEnum('payout_status', [
   'pending',
@@ -153,10 +149,7 @@ export const contributions = pgTable(
       table.paymentProvider,
       table.paymentRef
     ),
-    uniquePaymentRef: uniqueIndex('unique_payment_ref').on(
-      table.paymentProvider,
-      table.paymentRef
-    ),
+    uniquePaymentRef: uniqueIndex('unique_payment_ref').on(table.paymentProvider, table.paymentRef),
     validAmount: check('valid_amount', sql`${table.amountCents} >= 2000`),
   })
 );
@@ -165,7 +158,9 @@ export const payouts = pgTable(
   'payouts',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    dreamBoardId: uuid('dream_board_id').notNull().references(() => dreamBoards.id),
+    dreamBoardId: uuid('dream_board_id')
+      .notNull()
+      .references(() => dreamBoards.id),
     type: payoutTypeEnum('type').notNull(),
     grossCents: integer('gross_cents').notNull(),
     feeCents: integer('fee_cents').notNull(),
@@ -194,7 +189,10 @@ export const apiKeys = pgTable(
     partnerName: varchar('partner_name', { length: 100 }).notNull(),
     keyHash: varchar('key_hash', { length: 255 }).notNull(),
     keyPrefix: varchar('key_prefix', { length: 12 }).notNull(),
-    scopes: text('scopes').array().notNull().default(sql`'{}'::text[]`),
+    scopes: text('scopes')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     rateLimit: integer('rate_limit').notNull().default(1000),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

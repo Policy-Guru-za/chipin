@@ -19,8 +19,7 @@ const requestSchema = z.object({
 });
 
 const getClientIp = (request: NextRequest) =>
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-  request.headers.get('x-real-ip');
+  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);

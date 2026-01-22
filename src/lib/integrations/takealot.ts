@@ -125,7 +125,10 @@ export const parseTakealotSearchHtml = (html: string): TakealotSearchResult[] =>
   return results;
 };
 
-export async function fetchTakealotSearch(query: string, limit = 6): Promise<TakealotSearchResult[]> {
+export async function fetchTakealotSearch(
+  query: string,
+  limit = 6
+): Promise<TakealotSearchResult[]> {
   const searchUrl = `https://www.takealot.com/all?search=${encodeURIComponent(query)}`;
   const response = await fetch(searchUrl, {
     headers: {

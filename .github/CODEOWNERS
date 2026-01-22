@@ -1,0 +1,12 @@
+# Default owners for everything in the repo
+* @Policy-Guru-za
+
+# Core application code
+/src/ @Policy-Guru-za
+
+# Database and migrations
+/drizzle/ @Policy-Guru-za
+/src/lib/db/ @Policy-Guru-za
+
+# CI/CD and configuration
+/.github/ @Policy-Guru-za

@@ -90,8 +90,8 @@ export function TakealotGiftForm({
           {error === 'overflow'
             ? 'Please choose a charity overflow option.'
             : error === 'fetch_failed'
-            ? 'We could not fetch that product. Please try another link.'
-            : 'Please enter a valid Takealot link.'}
+              ? 'We could not fetch that product. Please try another link.'
+              : 'Please enter a valid Takealot link.'}
         </div>
       ) : null}
 
@@ -112,9 +112,7 @@ export function TakealotGiftForm({
             {loading ? 'Searching…' : 'Search'}
           </Button>
         </div>
-        {searchError ? (
-          <p className="text-sm text-red-600">{searchError}</p>
-        ) : null}
+        {searchError ? <p className="text-sm text-red-600">{searchError}</p> : null}
         {results.length ? (
           <div className="grid gap-3 md:grid-cols-2">
             {results.map((result) => (
@@ -164,7 +162,10 @@ export function TakealotGiftForm({
             cause.impacts.map((impact, index) => {
               const value = `${cause.id}::${index}`;
               return (
-                <label key={value} className="flex items-start gap-3 rounded-2xl border border-border bg-white p-4">
+                <label
+                  key={value}
+                  className="flex items-start gap-3 rounded-2xl border border-border bg-white p-4"
+                >
                   <input
                     type="radio"
                     name="overflowSelection"

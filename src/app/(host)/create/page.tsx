@@ -85,7 +85,8 @@ export default async function CreateDreamBoardPage({
           ) : null}
           {error === 'rate_limited' ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              You’ve requested too many links. {retryMinutes ? `Try again in ${retryMinutes} minutes.` : 'Please try again shortly.'}
+              You’ve requested too many links.{' '}
+              {retryMinutes ? `Try again in ${retryMinutes} minutes.` : 'Please try again shortly.'}
             </div>
           ) : null}
           {error === 'send_failed' ? (
@@ -121,7 +122,10 @@ export default async function CreateDreamBoardPage({
           ) : null}
           <p className="text-xs text-text-muted">We never share your email.</p>
           <p className="text-sm text-text-muted">
-            Curious first? <Link href="/" className="font-semibold text-text">Learn more →</Link>
+            Curious first?{' '}
+            <Link href="/" className="font-semibold text-text">
+              Learn more →
+            </Link>
           </p>
         </CardContent>
       </Card>

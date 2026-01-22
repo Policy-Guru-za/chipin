@@ -32,7 +32,10 @@ export default async function HostDashboardPage() {
       ) : (
         <div className="grid gap-6">
           {boards.map((board) => {
-            const percentage = Math.min(100, Math.round((board.raisedCents / board.goalCents) * 100));
+            const percentage = Math.min(
+              100,
+              Math.round((board.raisedCents / board.goalCents) * 100)
+            );
             return (
               <Card key={board.id}>
                 <CardHeader>
@@ -43,7 +46,9 @@ export default async function HostDashboardPage() {
                   <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-text">
                     <span>{formatZar(board.raisedCents)} raised</span>
                     <span>{board.contributionCount} contributions</span>
-                    <span className="uppercase tracking-[0.2em] text-text-muted">{board.status}</span>
+                    <span className="uppercase tracking-[0.2em] text-text-muted">
+                      {board.status}
+                    </span>
                   </div>
                   <Link href={`/dashboard/${board.id}`}>
                     <Button variant="outline">Manage</Button>

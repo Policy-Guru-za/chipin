@@ -138,8 +138,7 @@ export const validatePayfastMerchant = (payload: PayfastItnPayload) => {
   const config = getPayfastConfig();
   if (!config.merchantId || !config.merchantKey) return false;
   return (
-    payload['merchant_id'] === config.merchantId &&
-    payload['merchant_key'] === config.merchantKey
+    payload['merchant_id'] === config.merchantId && payload['merchant_key'] === config.merchantKey
   );
 };
 

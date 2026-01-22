@@ -15,7 +15,13 @@ export function DreamBoardCard({ imageUrl, title, subtitle, tag }: DreamBoardCar
       <CardContent className="p-0">
         <div className="flex flex-col gap-4 p-6 md:flex-row md:items-center">
           <div className="relative h-32 w-full overflow-hidden rounded-2xl bg-stone-100 md:h-28 md:w-28">
-            <Image src={imageUrl} alt={title} fill sizes="(max-width: 768px) 100vw, 112px" className="object-cover" />
+            <Image
+              src={imageUrl}
+              alt={title}
+              fill
+              sizes="(max-width: 768px) 100vw, 112px"
+              className="object-cover"
+            />
           </div>
           <div className="flex-1 space-y-2">
             {tag ? (

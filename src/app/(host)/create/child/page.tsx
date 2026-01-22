@@ -175,7 +175,13 @@ export default async function CreateChildPage({
               <label htmlFor="photo" className="text-sm font-medium text-text">
                 Child’s photo
               </label>
-              <Input id="photo" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required />
+              <Input
+                id="photo"
+                name="photo"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                required
+              />
               <p className="text-xs text-text-muted">Max 5MB. JPG, PNG, or WebP.</p>
             </div>
             <Button type="submit">Continue to gift</Button>

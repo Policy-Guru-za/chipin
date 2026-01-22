@@ -1,0 +1,20 @@
+{
+  "entry": [
+    "src/app/**/page.tsx",
+    "src/app/**/layout.tsx",
+    "src/app/**/route.ts",
+    "src/lib/**/*.{ts,tsx}",
+    "src/components/**/*.{ts,tsx}",
+    "scripts/**/*.ts",
+    "tests/**/*.{ts,tsx}"
+  ],
+  "project": ["tsconfig.json"],
+  "ignore": [
+    "src/lib/db/schema.ts",
+    "src/lib/db/queries.ts",
+    "drizzle/**",
+    "coverage/**",
+    ".next/**"
+  ],
+  "ignoreDependencies": ["lint-staged"]
+}

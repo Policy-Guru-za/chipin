@@ -21,10 +21,7 @@ export function ContributorList({ contributions }: ContributorListProps) {
   return (
     <div className="space-y-3">
       {contributions.map((contribution) => (
-        <div
-          key={contribution.id}
-          className="rounded-2xl border border-border bg-white p-4"
-        >
+        <div key={contribution.id} className="rounded-2xl border border-border bg-white p-4">
           <div className="flex items-center justify-between text-sm font-semibold text-text">
             <span>{contribution.contributorName || 'Anonymous'}</span>
             <span>{formatZarWithCents(contribution.amountCents)}</span>

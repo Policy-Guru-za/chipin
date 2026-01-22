@@ -2,8 +2,7 @@ import Link from 'next/link';
 
 import { buttonStyles } from '@/components/ui/button';
 
-const navLinkClasses =
-  'text-sm font-medium text-text-muted transition hover:text-text';
+const navLinkClasses = 'text-sm font-medium text-text-muted transition hover:text-text';
 
 export function Header() {
   return (

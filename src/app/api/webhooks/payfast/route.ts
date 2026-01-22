@@ -17,8 +17,7 @@ import {
 import { log } from '@/lib/observability/logger';
 
 const getClientIp = (request: NextRequest) =>
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-  request.headers.get('x-real-ip');
+  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();

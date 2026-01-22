@@ -28,7 +28,9 @@ export default async function ThankYouPage({ params, searchParams }: ThanksPageP
   return (
     <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12 text-center">
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">Thank you</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
+          Thank you
+        </p>
         <h1 className="text-3xl font-display text-text">
           {isComplete ? `Thank you, ${name}!` : 'Thanks for your support!'}
         </h1>

@@ -92,7 +92,9 @@ export default async function CreateReviewPage() {
                 className="h-24 w-24 rounded-full object-cover"
               />
               <div>
-                <p className="text-xl font-display text-text">{parsed.data.childName}&apos;s Dream Gift</p>
+                <p className="text-xl font-display text-text">
+                  {parsed.data.childName}&apos;s Dream Gift
+                </p>
                 <p className="text-sm text-text-muted">{giftTitle}</p>
               </div>
             </div>

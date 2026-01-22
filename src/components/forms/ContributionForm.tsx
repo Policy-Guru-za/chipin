@@ -36,7 +36,7 @@ export function ContributionForm({ dreamBoardId, childName, giftTitle }: Contrib
     return value * 100;
   }, [customAmountValid, isUsingCustom, trimmedCustomAmount]);
 
-  const contributionCents = isUsingCustom ? parsedCustom ?? 0 : selectedAmount;
+  const contributionCents = isUsingCustom ? (parsedCustom ?? 0) : selectedAmount;
   const feeCents = contributionCents > 0 ? calculateFee(contributionCents) : 0;
   const totalCents = contributionCents + feeCents;
 

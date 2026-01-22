@@ -12,7 +12,10 @@ import { fetchTakealotProduct, isTakealotUrl } from '@/lib/integrations/takealot
 import { TakealotGiftForm } from '@/components/forms/TakealotGiftForm';
 
 const takealotSchema = z.object({
-  productUrl: z.string().url().refine((value) => isTakealotUrl(value), 'Invalid Takealot URL'),
+  productUrl: z
+    .string()
+    .url()
+    .refine((value) => isTakealotUrl(value), 'Invalid Takealot URL'),
   overflowSelection: z.string().min(1),
 });
 
@@ -164,7 +167,9 @@ export default async function CreateGiftPage({
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
           Step 2 of 4
         </p>
-        <h1 className="text-3xl font-display text-text">What’s {draft.childName}&apos;s dream gift?</h1>
+        <h1 className="text-3xl font-display text-text">
+          What’s {draft.childName}&apos;s dream gift?
+        </h1>
         <p className="text-text-muted">Choose one special item to fund.</p>
       </div>
 
@@ -172,7 +177,9 @@ export default async function CreateGiftPage({
         <Link
           href="/create/gift?type=takealot"
           className={`rounded-full border px-4 py-2 text-sm font-semibold ${
-            giftType === 'takealot' ? 'border-primary bg-primary text-white' : 'border-border text-text'
+            giftType === 'takealot'
+              ? 'border-primary bg-primary text-white'
+              : 'border-border text-text'
           }`}
         >
           Takealot product
@@ -180,7 +187,9 @@ export default async function CreateGiftPage({
         <Link
           href="/create/gift?type=philanthropy"
           className={`rounded-full border px-4 py-2 text-sm font-semibold ${
-            giftType === 'philanthropy' ? 'border-primary bg-primary text-white' : 'border-border text-text'
+            giftType === 'philanthropy'
+              ? 'border-primary bg-primary text-white'
+              : 'border-border text-text'
           }`}
         >
           Gift of giving
@@ -191,7 +200,9 @@ export default async function CreateGiftPage({
         <Card>
           <CardHeader>
             <CardTitle>Takealot product</CardTitle>
-            <CardDescription>Search or paste a Takealot link and select a charity overflow.</CardDescription>
+            <CardDescription>
+              Search or paste a Takealot link and select a charity overflow.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <TakealotGiftForm
@@ -215,7 +226,9 @@ export default async function CreateGiftPage({
                 />
                 <div className="space-y-1">
                   <p className="text-sm font-semibold text-text">{draft.giftData.productName}</p>
-                  <p className="text-sm text-text-muted">R{(draft.giftData.productPrice / 100).toFixed(2)}</p>
+                  <p className="text-sm text-text-muted">
+                    R{(draft.giftData.productPrice / 100).toFixed(2)}
+                  </p>
                 </div>
               </div>
             ) : null}
@@ -239,7 +252,10 @@ export default async function CreateGiftPage({
                   cause.impacts.map((impact, index) => {
                     const value = `${cause.id}::${index}`;
                     return (
-                      <label key={value} className="flex items-start gap-3 rounded-2xl border border-border bg-white p-4">
+                      <label
+                        key={value}
+                        className="flex items-start gap-3 rounded-2xl border border-border bg-white p-4"
+                      >
                         <input
                           type="radio"
                           name="causeSelection"
@@ -251,7 +267,9 @@ export default async function CreateGiftPage({
                         <div>
                           <p className="text-sm font-semibold text-text">{cause.name}</p>
                           <p className="text-xs text-text-muted">{impact.description}</p>
-                          <p className="text-xs text-text-muted">Goal: R{(impact.amountCents / 100).toFixed(0)}</p>
+                          <p className="text-xs text-text-muted">
+                            Goal: R{(impact.amountCents / 100).toFixed(0)}
+                          </p>
                         </div>
                       </label>
                     );

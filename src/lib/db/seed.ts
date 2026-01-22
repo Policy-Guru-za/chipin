@@ -1,12 +1,5 @@
 import { db } from './index';
-import {
-  apiKeys,
-  contributions,
-  dreamBoards,
-  hosts,
-  payouts,
-  webhookEvents,
-} from './schema';
+import { apiKeys, contributions, dreamBoards, hosts, payouts, webhookEvents } from './schema';
 
 export async function seedDatabase() {
   await db.delete(webhookEvents);

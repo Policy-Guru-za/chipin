@@ -38,18 +38,20 @@ export default async function DreamBoardPage({ params }: { params: { slug: strin
   }
 
   const giftData = board.giftData as TakealotGiftData | PhilanthropyGiftData;
-  const takealotGift = board.giftType === 'takealot_product' ? (giftData as TakealotGiftData) : null;
-  const philanthropyGift = board.giftType === 'philanthropy' ? (giftData as PhilanthropyGiftData) : null;
+  const takealotGift =
+    board.giftType === 'takealot_product' ? (giftData as TakealotGiftData) : null;
+  const philanthropyGift =
+    board.giftType === 'philanthropy' ? (giftData as PhilanthropyGiftData) : null;
   const overflowData = board.overflowGiftData as OverflowGiftData | null;
   const percentage = Math.min(100, Math.round((board.raisedCents / board.goalCents) * 100));
   const daysLeft = getDaysLeft(new Date(board.deadline));
   const contributors = await listRecentContributors(board.id, 6);
 
-  const giftTitle = takealotGift ? takealotGift.productName : philanthropyGift?.causeName ?? '';
+  const giftTitle = takealotGift ? takealotGift.productName : (philanthropyGift?.causeName ?? '');
   const giftSubtitle = takealotGift
     ? 'Her dream gift'
-    : philanthropyGift?.impactDescription ?? '';
-  const giftImage = takealotGift ? takealotGift.productImage : philanthropyGift?.causeImage ?? '';
+    : (philanthropyGift?.impactDescription ?? '');
+  const giftImage = takealotGift ? takealotGift.productImage : (philanthropyGift?.causeImage ?? '');
 
   const funded = board.raisedCents >= board.goalCents;
   const isClosed = board.status !== 'active' && board.status !== 'funded';
@@ -102,7 +104,8 @@ export default async function DreamBoardPage({ params }: { params: { slug: strin
         <div className="rounded-3xl border border-accent/40 bg-accent/10 p-6 text-sm text-text">
           <p className="font-semibold">Gift fully funded!</p>
           <p className="mt-2 text-text-muted">
-            Additional contributions will support {overflowData.causeName}: {overflowData.impactDescription}.
+            Additional contributions will support {overflowData.causeName}:{' '}
+            {overflowData.impactDescription}.
           </p>
         </div>
       ) : null}

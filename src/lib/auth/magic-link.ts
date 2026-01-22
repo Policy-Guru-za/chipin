@@ -18,8 +18,7 @@ type MagicLinkContext = {
   requestId?: string;
 };
 
-const hashIdentifier = (value: string) =>
-  createHash('sha256').update(value).digest('hex');
+const hashIdentifier = (value: string) => createHash('sha256').update(value).digest('hex');
 
 async function checkMagicLinkRateLimit(
   emailHash: string,

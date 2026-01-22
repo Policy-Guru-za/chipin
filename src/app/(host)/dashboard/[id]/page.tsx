@@ -9,11 +9,7 @@ import { requireSession } from '@/lib/auth/session';
 import { getDreamBoardDetailForHost, listContributionsForDreamBoard } from '@/lib/db/queries';
 import { formatZar } from '@/lib/utils/money';
 
-export default async function DreamBoardDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function DreamBoardDetailPage({ params }: { params: { id: string } }) {
   const session = await requireSession();
   const board = await getDreamBoardDetailForHost(params.id, session.hostId);
 

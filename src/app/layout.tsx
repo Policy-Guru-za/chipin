@@ -19,16 +19,10 @@ export const metadata: Metadata = {
   description: 'A gift pooling platform for joyful celebrations.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${outfit.variable} ${fraunces.variable}`}>
-      <body className="min-h-screen bg-surface text-text">
-        {children}
-      </body>
+      <body className="min-h-screen bg-surface text-text">{children}</body>
     </html>
   );
 }

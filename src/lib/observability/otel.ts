@@ -14,8 +14,7 @@ const parseHeaders = (raw?: string): Record<string, string> | undefined => {
   );
 };
 
-export const getServiceName = (): string =>
-  process.env.OTEL_SERVICE_NAME ?? 'chipin';
+export const getServiceName = (): string => process.env.OTEL_SERVICE_NAME ?? 'chipin';
 
 export const buildOtelExporter = (): OTLPTraceExporter | null => {
   const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
