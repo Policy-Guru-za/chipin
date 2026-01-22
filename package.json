@@ -11,6 +11,8 @@
     "knip": "knip",
     "test": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage",
+    "test:payments": "vitest run tests/unit/payfast-*.test.ts tests/unit/ozow-*.test.ts tests/unit/snapscan-*.test.ts tests/unit/payment-*.test.ts",
+    "test:webhooks": "vitest run tests/integration/*webhook*.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:seed": "tsx scripts/seed.ts",
@@ -36,6 +38,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "resend": "^6.8.0",
+    "svix": "^1.84.1",
     "tailwind-merge": "^3.4.0",
     "zod": "^3.24.1"
   },

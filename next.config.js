@@ -7,6 +7,7 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.blob.vercel-storage.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: '**.takealot.com' },
+      { protocol: 'https', hostname: 'pos.snapscan.io' },
     ],
   },
 };

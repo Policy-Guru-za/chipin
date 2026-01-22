@@ -5,6 +5,7 @@ import { DreamBoardCard } from '@/components/dream-board/DreamBoardCard';
 import { ContributionForm } from '@/components/forms/ContributionForm';
 import { Button } from '@/components/ui/button';
 import { getDreamBoardBySlug } from '@/lib/db/queries';
+import { getAvailablePaymentProviders } from '@/lib/payments';
 
 type TakealotGiftData = {
   productName: string;
@@ -22,6 +23,8 @@ export default async function ContributionPage({ params }: { params: { slug: str
   if (!board) {
     notFound();
   }
+
+  const availableProviders = getAvailablePaymentProviders();
 
   const giftData = board.giftData as TakealotGiftData | PhilanthropyGiftData;
   const takealotGift =
@@ -63,7 +66,19 @@ export default async function ContributionPage({ params }: { params: { slug: str
 
       <DreamBoardCard imageUrl={giftImage} title={giftTitle} subtitle={giftSubtitle} />
 
-      <ContributionForm dreamBoardId={board.id} childName={board.childName} giftTitle={giftTitle} />
+      {availableProviders.length === 0 ? (
+        <div className="rounded-3xl border border-border bg-subtle p-6 text-center text-sm text-text">
+          Payments are temporarily unavailable. Please check back shortly.
+        </div>
+      ) : null}
+
+      <ContributionForm
+        dreamBoardId={board.id}
+        childName={board.childName}
+        giftTitle={giftTitle}
+        slug={board.slug}
+        availableProviders={availableProviders}
+      />
     </section>
   );
 }

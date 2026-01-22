@@ -1,5 +1,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 
+import type { PaymentProvider } from '@/lib/payments';
+
 import { db } from './index';
 import { contributions, dreamBoards, hosts } from './schema';
 
@@ -190,7 +192,10 @@ export async function listRecentContributors(dreamBoardId: string, limit = 6) {
     .limit(limit);
 }
 
-export async function getContributionByPaymentRef(paymentProvider: 'payfast', paymentRef: string) {
+export async function getContributionByPaymentRef(
+  paymentProvider: PaymentProvider,
+  paymentRef: string
+) {
   const [contribution] = await db
     .select({
       id: contributions.id,

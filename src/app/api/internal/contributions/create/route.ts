@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { enforceRateLimit } from '@/lib/auth/rate-limit';
 import { db } from '@/lib/db';
 import { dreamBoards, contributions } from '@/lib/db/schema';
-import { createPayfastPayment } from '@/lib/payments/payfast';
 import { calculateTotalWithFee } from '@/lib/payments/fees';
+import { createPaymentIntent, isPaymentProviderAvailable } from '@/lib/payments';
 import { generatePaymentRef } from '@/lib/payments/reference';
 import { log } from '@/lib/observability/logger';
 
@@ -15,7 +15,7 @@ const requestSchema = z.object({
   contributionCents: z.number().int().min(2000).max(1000000),
   contributorName: z.string().max(100).optional(),
   message: z.string().max(280).optional(),
-  paymentProvider: z.literal('payfast'),
+  paymentProvider: z.enum(['payfast', 'ozow', 'snapscan']),
 });
 
 const getClientIp = (request: NextRequest) =>
@@ -59,6 +59,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'board_closed' }, { status: 400 });
   }
 
+  if (!isPaymentProviderAvailable(parsed.data.paymentProvider)) {
+    return NextResponse.json({ error: 'provider_unavailable' }, { status: 400 });
+  }
+
   try {
     const contributionCents = parsed.data.contributionCents;
     const totalCents = calculateTotalWithFee(contributionCents);
@@ -75,7 +79,7 @@ export async function POST(request: NextRequest) {
       message,
       amountCents: contributionCents,
       feeCents,
-      paymentProvider: 'payfast',
+      paymentProvider: parsed.data.paymentProvider,
       paymentRef,
       paymentStatus: 'pending',
       ipAddress: ip ?? undefined,
@@ -83,13 +87,14 @@ export async function POST(request: NextRequest) {
     });
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-    const payment = createPayfastPayment({
+    const payment = await createPaymentIntent(parsed.data.paymentProvider, {
       amountCents: totalCents,
       reference: paymentRef,
-      itemName: `Contribution to ${board.childName}'s Dream Board`,
-      returnUrl: `${baseUrl}/${board.slug}/thanks?ref=${paymentRef}`,
-      cancelUrl: `${baseUrl}/${board.slug}?cancelled=1`,
-      notifyUrl: `${baseUrl}/api/webhooks/payfast`,
+      description: `Contribution to ${board.childName}'s Dream Board`,
+      returnUrl: `${baseUrl}/${board.slug}/thanks?ref=${paymentRef}&provider=${parsed.data.paymentProvider}`,
+      cancelUrl: `${baseUrl}/${board.slug}?cancelled=1&provider=${parsed.data.paymentProvider}`,
+      notifyUrl: `${baseUrl}/api/webhooks/${parsed.data.paymentProvider}`,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     });
 
     return NextResponse.json(payment);

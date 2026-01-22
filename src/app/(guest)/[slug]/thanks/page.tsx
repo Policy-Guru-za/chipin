@@ -4,11 +4,12 @@ import { notFound } from 'next/navigation';
 import { ProgressBar } from '@/components/dream-board/ProgressBar';
 import { Button } from '@/components/ui/button';
 import { getContributionByPaymentRef, getDreamBoardBySlug } from '@/lib/db/queries';
+import type { PaymentProvider } from '@/lib/payments';
 import { formatZar } from '@/lib/utils/money';
 
 type ThanksPageProps = {
   params: { slug: string };
-  searchParams?: { ref?: string };
+  searchParams?: { ref?: string; provider?: PaymentProvider };
 };
 
 export default async function ThankYouPage({ params, searchParams }: ThanksPageProps) {
@@ -18,7 +19,12 @@ export default async function ThankYouPage({ params, searchParams }: ThanksPageP
   }
 
   const ref = searchParams?.ref;
-  const contribution = ref ? await getContributionByPaymentRef('payfast', ref) : null;
+  const providerParam = searchParams?.provider;
+  const provider: PaymentProvider =
+    providerParam && ['payfast', 'ozow', 'snapscan'].includes(providerParam)
+      ? providerParam
+      : 'payfast';
+  const contribution = ref ? await getContributionByPaymentRef(provider, ref) : null;
   const percentage = Math.min(100, Math.round((board.raisedCents / board.goalCents) * 100));
 
   const name = contribution?.contributorName || 'Friend';
