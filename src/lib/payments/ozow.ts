@@ -198,3 +198,153 @@ export const mapOzowStatus = (payload: OzowWebhookPayload) => {
   }
   return 'processing';
 };
+
+export type OzowTransaction = {
+  id?: string;
+  status?: string;
+  merchantReference?: string;
+  amount?: { value?: number | string } | number | string;
+};
+
+const DEFAULT_OZOW_PAGE_LIMIT = 100;
+const DEFAULT_OZOW_MAX_PAGES = 20;
+
+export const listOzowTransactions = async (params: {
+  fromDate: string;
+  toDate: string;
+  siteCode?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  const config = getOzowConfig();
+  if (!config.clientId || !config.clientSecret || !config.baseUrl) {
+    throw new Error('Ozow configuration is incomplete');
+  }
+
+  const accessToken = await getOzowAccessToken('payment');
+  const url = new URL(`${config.baseUrl}/transactions`);
+  url.searchParams.set('fromDate', params.fromDate);
+  url.searchParams.set('toDate', params.toDate);
+  if (params.siteCode ?? config.siteCode) {
+    url.searchParams.set('siteCode', params.siteCode ?? config.siteCode);
+  }
+  if (typeof params.limit === 'number') {
+    url.searchParams.set('limit', String(params.limit));
+  }
+  if (typeof params.offset === 'number') {
+    url.searchParams.set('offset', String(params.offset));
+  }
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Ozow transactions request failed (${response.status}): ${errorText}`);
+  }
+
+  return response.json() as Promise<unknown>;
+};
+
+export const listOzowTransactionsPaged = async (params: {
+  fromDate: string;
+  toDate: string;
+  siteCode?: string;
+  limit?: number;
+  maxPages?: number;
+}) => {
+  const limit = params.limit ?? DEFAULT_OZOW_PAGE_LIMIT;
+  const maxPages = params.maxPages ?? DEFAULT_OZOW_MAX_PAGES;
+  const transactions: OzowTransaction[] = [];
+  let offset = 0;
+  let pagesFetched = 0;
+
+  while (pagesFetched < maxPages) {
+    const payload = await listOzowTransactions({
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      siteCode: params.siteCode,
+      limit,
+      offset,
+    });
+    const pageTransactions = extractOzowTransactions(payload);
+    transactions.push(...pageTransactions);
+    pagesFetched += 1;
+
+    if (pageTransactions.length < limit) {
+      return { transactions, pagesFetched, pagingComplete: true };
+    }
+
+    offset += limit;
+  }
+
+  return { transactions, pagesFetched, pagingComplete: false };
+};
+
+export const extractOzowTransactions = (payload: unknown): OzowTransaction[] => {
+  if (Array.isArray(payload)) {
+    return payload as OzowTransaction[];
+  }
+
+  if (payload && typeof payload === 'object') {
+    const record = payload as Record<string, unknown>;
+    const candidates =
+      record.data ?? record.transactions ?? record.items ?? record.results ?? record.records;
+    if (Array.isArray(candidates)) {
+      return candidates as OzowTransaction[];
+    }
+  }
+
+  return [];
+};
+
+export const parseOzowTransactionAmountCents = (transaction: OzowTransaction) => {
+  const record = transaction as Record<string, unknown>;
+  const paymentRequest = record.paymentRequest as Record<string, unknown> | undefined;
+  const paymentRequestAmount = paymentRequest?.amount as { value?: number | string } | undefined;
+  const raw =
+    (transaction.amount as { value?: number | string } | undefined)?.value ??
+    transaction.amount ??
+    paymentRequestAmount?.value;
+
+  if (typeof raw === 'number') {
+    return Math.round(raw * 100);
+  }
+
+  if (typeof raw === 'string') {
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) return null;
+    return Math.round(parsed * 100);
+  }
+
+  return null;
+};
+
+export const extractOzowTransactionReference = (transaction: OzowTransaction) => {
+  const record = transaction as Record<string, unknown>;
+  const paymentRequest = record.paymentRequest as Record<string, unknown> | undefined;
+  const reference =
+    transaction.merchantReference ??
+    (paymentRequest?.merchantReference as string | undefined) ??
+    (record.merchant_reference as string | undefined);
+
+  return typeof reference === 'string' ? reference : null;
+};
+
+export const mapOzowTransactionStatus = (status?: string | null) => {
+  if (!status) return 'processing';
+  const normalized = status.toLowerCase();
+  if (['successful', 'success', 'paid', 'completed'].some((value) => normalized.includes(value))) {
+    return 'completed';
+  }
+  if (
+    ['error', 'failed', 'cancelled', 'canceled', 'expired', 'refunded'].some((value) =>
+      normalized.includes(value)
+    )
+  ) {
+    return 'failed';
+  }
+  return 'processing';
+};

@@ -25,6 +25,12 @@ Applies to all phases. Use as acceptance criteria for enterprise-grade delivery.
 - Webhook handlers: p95 < 300 ms (excluding third-party validation).
 - Background jobs: idempotent; retry-safe; no global locks.
 
+## Performance Measurement Log
+
+| Date | Environment | Page | Tool | LCP | TTFB | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-01-22 | Staging (URL TBD) | Guest view + Contribute | Lighthouse | Pending | Pending | Blocked: staging URL required. |
+
 ## Scalability
 
 - Support 10k concurrent guest sessions and 1k concurrent payments without degradation.

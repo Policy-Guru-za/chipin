@@ -5,6 +5,10 @@ type SnapScanConfig = {
   webhookAuthKey: string;
 };
 
+type SnapScanApiConfig = {
+  apiKey: string;
+};
+
 export type SnapScanPaymentParams = {
   amountCents: number;
   reference: string;
@@ -17,10 +21,30 @@ export type SnapScanPayment = {
 
 export type SnapScanWebhookPayload = Record<string, unknown>;
 
+export type SnapScanPaymentRecord = {
+  id?: number | string;
+  status?: string;
+  date?: string;
+  totalAmount?: number;
+  requiredAmount?: number;
+  merchantReference?: string;
+};
+
 const getSnapScanConfig = (): SnapScanConfig => ({
   snapCode: process.env.SNAPSCAN_SNAPCODE ?? '',
   webhookAuthKey: process.env.SNAPSCAN_WEBHOOK_AUTH_KEY ?? '',
 });
+
+const getSnapScanApiConfig = (): SnapScanApiConfig => ({
+  apiKey: process.env.SNAPSCAN_API_KEY ?? '',
+});
+
+const SNAPSCAN_API_BASE = 'https://pos.snapscan.io/merchant/api/v1';
+
+const snapscanAuthHeader = (apiKey: string) => {
+  const token = Buffer.from(`${apiKey}:`, 'utf8').toString('base64');
+  return `Basic ${token}`;
+};
 
 export const isSnapScanConfigured = () => {
   const config = getSnapScanConfig();
@@ -128,4 +152,78 @@ export const mapSnapScanStatus = (payload: SnapScanWebhookPayload) => {
     return 'failed';
   }
   return 'processing';
+};
+
+export const listSnapScanPayments = async (params: {
+  merchantReference?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  perPage?: number;
+}) => {
+  const { apiKey } = getSnapScanApiConfig();
+  if (!apiKey) {
+    throw new Error('SnapScan API key is missing');
+  }
+
+  const url = new URL(`${SNAPSCAN_API_BASE}/payments`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined) return;
+    url.searchParams.set(key, String(value));
+  });
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: snapscanAuthHeader(apiKey),
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`SnapScan API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json() as Promise<unknown>;
+};
+
+export const extractSnapScanPayments = (payload: unknown): SnapScanPaymentRecord[] => {
+  if (Array.isArray(payload)) {
+    return payload as SnapScanPaymentRecord[];
+  }
+
+  if (payload && typeof payload === 'object') {
+    const record = payload as Record<string, unknown>;
+    const candidates = record.data ?? record.payments ?? record.items ?? record.results;
+    if (Array.isArray(candidates)) {
+      return candidates as SnapScanPaymentRecord[];
+    }
+  }
+
+  return [];
+};
+
+export const mapSnapScanPaymentStatus = (status?: string | null) => {
+  if (!status) return 'processing';
+  const normalized = status.toLowerCase();
+  if (['completed', 'paid', 'success', 'successful'].some((value) => normalized.includes(value))) {
+    return 'completed';
+  }
+  if (
+    ['error', 'failed', 'cancelled', 'canceled', 'expired'].some((value) =>
+      normalized.includes(value)
+    )
+  ) {
+    return 'failed';
+  }
+  return 'processing';
+};
+
+export const parseSnapScanPaymentAmountCents = (payment: SnapScanPaymentRecord) => {
+  const amount = payment.requiredAmount ?? payment.totalAmount;
+  if (typeof amount === 'number') {
+    return Math.round(amount);
+  }
+  return null;
 };

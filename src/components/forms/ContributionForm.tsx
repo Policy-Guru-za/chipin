@@ -195,6 +195,8 @@ type ContributionFormProps = {
   dreamBoardId: string;
   childName: string;
   giftTitle: string;
+  headline?: string;
+  subtitle?: string;
   slug: string;
   availableProviders: PaymentProvider[];
 };
@@ -203,6 +205,8 @@ export function ContributionForm({
   dreamBoardId,
   childName,
   giftTitle,
+  headline,
+  subtitle,
   slug,
   availableProviders,
 }: ContributionFormProps) {
@@ -252,8 +256,10 @@ export function ContributionForm({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <p className="text-sm font-semibold text-text">Contribute to {childName}&apos;s gift</p>
-        <p className="text-sm text-text-muted">{giftTitle}</p>
+        <p className="text-sm font-semibold text-text">
+          {headline ?? `Contribute to ${childName}'s gift`}
+        </p>
+        <p className="text-sm text-text-muted">{subtitle ?? giftTitle}</p>
       </div>
 
       <AmountSelector

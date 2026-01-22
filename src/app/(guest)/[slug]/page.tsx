@@ -10,6 +10,8 @@ import { ProgressBar } from '@/components/dream-board/ProgressBar';
 import { Button } from '@/components/ui/button';
 import { getDreamBoardBySlug, listRecentContributors } from '@/lib/db/queries';
 import { getCauseById } from '@/lib/dream-boards/causes';
+import { buildDreamBoardMetadata } from '@/lib/dream-boards/metadata';
+import { getOverflowState } from '@/lib/dream-boards/overflow';
 import { formatZar } from '@/lib/utils/money';
 
 type TakealotGiftData = {
@@ -55,14 +57,6 @@ type GuestViewModel = {
 };
 
 type Contributor = Awaited<ReturnType<typeof listRecentContributors>>[number];
-
-const toAbsoluteUrl = (url: string, baseUrl: string) => {
-  try {
-    return new URL(url).toString();
-  } catch {
-    return new URL(url, baseUrl).toString();
-  }
-};
 
 const getBoard = cache(async (slug: string) => getDreamBoardBySlug(slug));
 
@@ -130,9 +124,12 @@ const buildGuestViewModel = (board: DreamBoardRecord): GuestViewModel => {
   const overflowData = board.overflowGiftData as OverflowGiftData | null;
   const { overflowTitle, overflowSubtitle, overflowImage } = getOverflowInfo(board, overflowData);
 
-  const funded = board.raisedCents >= board.goalCents;
-  const showCharityOverflow =
-    funded && board.giftType === 'takealot_product' && Boolean(overflowData);
+  const { funded, showCharityOverflow } = getOverflowState({
+    raisedCents: board.raisedCents,
+    goalCents: board.goalCents,
+    giftType: board.giftType,
+    overflowGiftData: overflowData,
+  });
 
   return {
     childName: board.childName,
@@ -169,49 +166,6 @@ const getHeroCopy = (view: GuestViewModel) => {
   return {
     title: 'Help make this gift happen',
     subtitle: '',
-  };
-};
-
-const getMetadataDescription = (board: DreamBoardRecord, view: GuestViewModel) => {
-  if (view.showCharityOverflow && view.overflowData) {
-    return `Gift funded. Contributions now support ${view.overflowData.causeName}: ${view.overflowData.impactDescription}.`;
-  }
-
-  if (board.giftType === 'takealot_product') {
-    return `Chip in for ${board.childName}'s ${view.giftTitle}.`;
-  }
-
-  return `Support ${view.giftTitle} for ${board.childName}.`;
-};
-
-const getMetadataImage = (view: GuestViewModel, baseUrl: string, fallback: string) => {
-  const imageCandidate = view.showCharityOverflow ? view.overflowImage : view.giftImage || fallback;
-  return imageCandidate ? toAbsoluteUrl(imageCandidate, baseUrl) : undefined;
-};
-
-const buildMetadataForBoard = (board: DreamBoardRecord, baseUrl: string): Metadata => {
-  const view = buildGuestViewModel(board);
-  const title = `${board.childName}'s Dream Board | ChipIn`;
-  const description = getMetadataDescription(board, view);
-  const imageUrl = getMetadataImage(view, baseUrl, board.childPhotoUrl);
-  const url = `${baseUrl}/${board.slug}`;
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      url,
-      type: 'website',
-      images: imageUrl ? [{ url: imageUrl }] : undefined,
-    },
-    twitter: {
-      card: imageUrl ? 'summary_large_image' : 'summary',
-      title,
-      description,
-      images: imageUrl ? [imageUrl] : undefined,
-    },
   };
 };
 
@@ -383,7 +337,7 @@ export async function generateMetadata({
     };
   }
 
-  return buildMetadataForBoard(board, baseUrl);
+  return buildDreamBoardMetadata(board, { baseUrl, path: `/${board.slug}` });
 }
 
 export default async function DreamBoardPage({ params }: { params: { slug: string } }) {

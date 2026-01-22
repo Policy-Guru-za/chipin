@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  extractOzowTransactionReference,
+  extractOzowTransactions,
   extractOzowReference,
+  mapOzowTransactionStatus,
   mapOzowStatus,
   parseOzowAmountCents,
+  parseOzowTransactionAmountCents,
   verifyOzowWebhook,
 } from '@/lib/payments/ozow';
 
@@ -52,5 +56,24 @@ describe('Ozow webhook utilities', () => {
   it('returns null when webhook secret is missing', () => {
     process.env.OZOW_WEBHOOK_SECRET = '';
     expect(verifyOzowWebhook('{}', new Headers())).toBeNull();
+  });
+
+  it('extracts transactions and maps statuses', () => {
+    const payload = {
+      data: [
+        {
+          merchantReference: 'OZOW-TXN',
+          status: 'Successful',
+          amount: { value: '52.50' },
+        },
+      ],
+    };
+
+    const transactions = extractOzowTransactions(payload);
+    expect(transactions).toHaveLength(1);
+    expect(extractOzowTransactionReference(transactions[0])).toBe('OZOW-TXN');
+    expect(parseOzowTransactionAmountCents(transactions[0])).toBe(5250);
+    expect(mapOzowTransactionStatus(transactions[0].status)).toBe('completed');
+    expect(mapOzowTransactionStatus('Cancelled')).toBe('failed');
   });
 });

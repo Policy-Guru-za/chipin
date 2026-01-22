@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   extractSnapScanReference,
+  extractSnapScanPayments,
+  mapSnapScanPaymentStatus,
   mapSnapScanStatus,
+  parseSnapScanPaymentAmountCents,
   parseSnapScanAmountCents,
   parseSnapScanPayload,
   verifySnapScanSignature,
@@ -30,5 +33,18 @@ describe('SnapScan parsing helpers', () => {
     expect(extractSnapScanReference(payload)).toBe('SNAP-REF');
     expect(parseSnapScanAmountCents(payload)).toBe(7550);
     expect(mapSnapScanStatus(payload)).toBe('failed');
+  });
+
+  it('parses payment list responses and statuses', () => {
+    const listPayload = {
+      data: [{ merchantReference: 'SNAP-REF', status: 'Completed', requiredAmount: 5250 }],
+    };
+
+    const payments = extractSnapScanPayments(listPayload);
+    expect(payments).toHaveLength(1);
+    expect(mapSnapScanPaymentStatus(payments[0].status)).toBe('completed');
+    expect(parseSnapScanPaymentAmountCents(payments[0])).toBe(5250);
+    expect(mapSnapScanPaymentStatus('error')).toBe('failed');
+    expect(mapSnapScanPaymentStatus('pending')).toBe('processing');
   });
 });

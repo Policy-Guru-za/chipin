@@ -411,6 +411,16 @@ Logs retained for 90 days, searchable via Vercel Logs.
 
 ---
 
+## Phase 5 Security Gate Sign-off (2026-01-22)
+
+| Check | Status | Notes |
+| --- | --- | --- |
+| Repo secrets scan | ✅ Complete | No secrets detected in tracked files. |
+| Rate limiting enforced | ✅ Complete | Auth magic links, contribution create, and all payment webhooks rate limited. |
+| Vercel env verification | ⏳ Pending | Requires owner confirmation in Vercel dashboard. |
+
+---
+
 ## Security Checklist for Development
 
 ### Before Each Deploy

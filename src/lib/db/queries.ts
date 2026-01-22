@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
 
 import type { PaymentProvider } from '@/lib/payments';
 
@@ -226,6 +226,55 @@ export async function updateContributionStatus(
     .update(contributions)
     .set({ paymentStatus: status, updatedAt: new Date() })
     .where(eq(contributions.id, id));
+}
+
+export async function listContributionsForReconciliation(lookbackStart: Date, cutoff: Date) {
+  return db
+    .select({
+      id: contributions.id,
+      dreamBoardId: contributions.dreamBoardId,
+      paymentProvider: contributions.paymentProvider,
+      paymentRef: contributions.paymentRef,
+      amountCents: contributions.amountCents,
+      feeCents: contributions.feeCents,
+      paymentStatus: contributions.paymentStatus,
+      createdAt: contributions.createdAt,
+    })
+    .from(contributions)
+    .where(
+      and(
+        inArray(contributions.paymentStatus, ['pending', 'processing']),
+        gte(contributions.createdAt, lookbackStart),
+        lt(contributions.createdAt, cutoff)
+      )
+    );
+}
+
+export async function listContributionsForLongTailReconciliation(
+  longTailStart: Date,
+  lookbackStart: Date,
+  cutoff: Date
+) {
+  return db
+    .select({
+      id: contributions.id,
+      dreamBoardId: contributions.dreamBoardId,
+      paymentProvider: contributions.paymentProvider,
+      paymentRef: contributions.paymentRef,
+      amountCents: contributions.amountCents,
+      feeCents: contributions.feeCents,
+      paymentStatus: contributions.paymentStatus,
+      createdAt: contributions.createdAt,
+    })
+    .from(contributions)
+    .where(
+      and(
+        inArray(contributions.paymentStatus, ['pending', 'processing']),
+        gte(contributions.createdAt, longTailStart),
+        lt(contributions.createdAt, lookbackStart),
+        lt(contributions.createdAt, cutoff)
+      )
+    );
 }
 
 export async function markDreamBoardFundedIfNeeded(dreamBoardId: string) {
