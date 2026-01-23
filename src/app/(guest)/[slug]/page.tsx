@@ -9,151 +9,13 @@ import { DreamBoardCard } from '@/components/dream-board/DreamBoardCard';
 import { ProgressBar } from '@/components/dream-board/ProgressBar';
 import { Button } from '@/components/ui/button';
 import { getDreamBoardBySlug, listRecentContributors } from '@/lib/db/queries';
-import { getCauseById } from '@/lib/dream-boards/causes';
 import { buildDreamBoardMetadata } from '@/lib/dream-boards/metadata';
-import { getOverflowState } from '@/lib/dream-boards/overflow';
+import { buildGuestViewModel, type GuestViewModel } from '@/lib/dream-boards/view-model';
 import { formatZar } from '@/lib/utils/money';
-
-type TakealotGiftData = {
-  productName: string;
-  productImage: string;
-};
-
-type PhilanthropyGiftData = {
-  causeName: string;
-  causeImage: string;
-  impactDescription: string;
-};
-
-type OverflowGiftData = {
-  causeId: string;
-  causeName: string;
-  impactDescription: string;
-};
-
-type DreamBoardRecord = NonNullable<Awaited<ReturnType<typeof getDreamBoardBySlug>>>;
-
-type GuestViewModel = {
-  childName: string;
-  childPhotoUrl: string;
-  slug: string;
-  giftType: DreamBoardRecord['giftType'];
-  giftTitle: string;
-  giftSubtitle: string;
-  giftImage: string;
-  overflowTitle: string;
-  overflowSubtitle: string;
-  overflowImage: string;
-  overflowData: OverflowGiftData | null;
-  funded: boolean;
-  isClosed: boolean;
-  showCharityOverflow: boolean;
-  percentage: number;
-  daysLeft: number;
-  contributionCount: number;
-  raisedCents: number;
-  goalCents: number;
-  message: string | null;
-};
 
 type Contributor = Awaited<ReturnType<typeof listRecentContributors>>[number];
 
 const getBoard = cache(async (slug: string) => getDreamBoardBySlug(slug));
-
-const getDaysLeft = (deadline: Date) => {
-  const diff = deadline.getTime() - Date.now();
-  if (diff <= 0) return 0;
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-};
-
-const getTakealotGift = (board: DreamBoardRecord) =>
-  board.giftType === 'takealot_product' ? (board.giftData as TakealotGiftData) : null;
-
-const getPhilanthropyGift = (board: DreamBoardRecord) =>
-  board.giftType === 'philanthropy' ? (board.giftData as PhilanthropyGiftData) : null;
-
-const getGiftTitle = (
-  takealotGift: TakealotGiftData | null,
-  philanthropyGift: PhilanthropyGiftData | null
-) => {
-  if (takealotGift?.productName) {
-    return takealotGift.productName;
-  }
-
-  return philanthropyGift?.causeName ?? '';
-};
-
-const getGiftSubtitle = (
-  takealotGift: TakealotGiftData | null,
-  philanthropyGift: PhilanthropyGiftData | null
-) => {
-  if (takealotGift) {
-    return 'Her dream gift';
-  }
-
-  return philanthropyGift?.impactDescription ?? '';
-};
-
-const getGiftImage = (
-  takealotGift: TakealotGiftData | null,
-  philanthropyGift: PhilanthropyGiftData | null
-) => {
-  if (takealotGift?.productImage) {
-    return takealotGift.productImage;
-  }
-
-  return philanthropyGift?.causeImage ?? '';
-};
-
-const getOverflowInfo = (board: DreamBoardRecord, overflowData: OverflowGiftData | null) => {
-  const overflowCause = overflowData ? getCauseById(overflowData.causeId) : null;
-
-  return {
-    overflowTitle: overflowData?.causeName ?? '',
-    overflowSubtitle: overflowData?.impactDescription ?? '',
-    overflowImage: overflowCause?.imageUrl ?? board.childPhotoUrl,
-  };
-};
-
-const buildGuestViewModel = (board: DreamBoardRecord): GuestViewModel => {
-  const takealotGift = getTakealotGift(board);
-  const philanthropyGift = getPhilanthropyGift(board);
-  const giftTitle = getGiftTitle(takealotGift, philanthropyGift);
-  const giftSubtitle = getGiftSubtitle(takealotGift, philanthropyGift);
-  const giftImage = getGiftImage(takealotGift, philanthropyGift);
-  const overflowData = board.overflowGiftData as OverflowGiftData | null;
-  const { overflowTitle, overflowSubtitle, overflowImage } = getOverflowInfo(board, overflowData);
-
-  const { funded, showCharityOverflow } = getOverflowState({
-    raisedCents: board.raisedCents,
-    goalCents: board.goalCents,
-    giftType: board.giftType,
-    overflowGiftData: overflowData,
-  });
-
-  return {
-    childName: board.childName,
-    childPhotoUrl: board.childPhotoUrl,
-    slug: board.slug,
-    giftType: board.giftType,
-    giftTitle,
-    giftSubtitle,
-    giftImage,
-    overflowTitle,
-    overflowSubtitle,
-    overflowImage,
-    overflowData,
-    funded,
-    isClosed: board.status !== 'active' && board.status !== 'funded',
-    showCharityOverflow,
-    percentage: Math.min(100, Math.round((board.raisedCents / board.goalCents) * 100)),
-    daysLeft: getDaysLeft(new Date(board.deadline)),
-    contributionCount: board.contributionCount,
-    raisedCents: board.raisedCents,
-    goalCents: board.goalCents,
-    message: board.message ?? null,
-  };
-};
 
 const getHeroCopy = (view: GuestViewModel) => {
   if (view.showCharityOverflow) {
@@ -345,7 +207,7 @@ export default async function DreamBoardPage({ params }: { params: { slug: strin
   if (!board) {
     notFound();
   }
-  const view = buildGuestViewModel(board);
+  const view = buildGuestViewModel(board, { takealotSubtitle: 'Her dream gift' });
   const contributors = await listRecentContributors(board.id, 6);
 
   return (
