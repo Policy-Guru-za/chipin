@@ -3,11 +3,13 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
+import { CreateFlowShell } from '@/components/layout/CreateFlowShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { requireSession } from '@/lib/auth/session';
 import { CURATED_CAUSES, getCauseById } from '@/lib/dream-boards/causes';
 import { getDreamBoardDraft, updateDreamBoardDraft } from '@/lib/dream-boards/draft';
+import { buildCreateFlowViewModel } from '@/lib/host/create-view-model';
 import { fetchTakealotProduct, isTakealotUrl } from '@/lib/integrations/takealot';
 import { TakealotGiftForm } from '@/components/forms/TakealotGiftForm';
 
@@ -42,8 +44,9 @@ async function saveTakealotGiftAction(formData: FormData) {
 
   const session = await requireSession();
   const draft = await getDreamBoardDraft(session.hostId);
-  if (!draft?.childName || !draft?.birthdayDate || !draft?.childPhotoUrl) {
-    redirect('/create/child');
+  const view = buildCreateFlowViewModel({ step: 'gift', draft });
+  if (view.redirectTo) {
+    redirect(view.redirectTo);
   }
   const productUrl = formData.get('productUrl');
   const overflowSelection = formData.get('overflowSelection');
@@ -87,7 +90,11 @@ async function savePhilanthropyGiftAction(formData: FormData) {
 
   const session = await requireSession();
   const draft = await getDreamBoardDraft(session.hostId);
-  if (!draft?.childName || !draft?.birthdayDate || !draft?.childPhotoUrl) {
+  const view = buildCreateFlowViewModel({ step: 'gift', draft });
+  if (view.redirectTo) {
+    redirect(view.redirectTo);
+  }
+  if (!draft) {
     redirect('/create/child');
   }
   const causeSelection = formData.get('causeSelection');
@@ -131,7 +138,11 @@ export default async function CreateGiftPage({
 }) {
   const session = await requireSession();
   const draft = await getDreamBoardDraft(session.hostId);
-  if (!draft?.childName || !draft?.birthdayDate || !draft?.childPhotoUrl) {
+  const view = buildCreateFlowViewModel({ step: 'gift', draft });
+  if (view.redirectTo) {
+    redirect(view.redirectTo);
+  }
+  if (!draft) {
     redirect('/create/child');
   }
 
@@ -162,17 +173,7 @@ export default async function CreateGiftPage({
   })();
 
   return (
-    <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-          Step 2 of 4
-        </p>
-        <h1 className="text-3xl font-display text-text">
-          What’s {draft.childName}&apos;s dream gift?
-        </h1>
-        <p className="text-text-muted">Choose one special item to fund.</p>
-      </div>
-
+    <CreateFlowShell stepLabel={view.stepLabel} title={view.title} subtitle={view.subtitle}>
       <div className="flex flex-wrap gap-3">
         <Link
           href="/create/gift?type=takealot"
@@ -215,20 +216,20 @@ export default async function CreateGiftPage({
               error={error}
             />
 
-            {draft?.giftData?.type === 'takealot_product' ? (
+            {draft?.giftData?.type === 'takealot_product' && view.giftPreview ? (
               <div className="flex items-center gap-4 rounded-2xl border border-border bg-subtle p-4">
                 <Image
-                  src={draft.giftData.productImage}
-                  alt={draft.giftData.productName}
+                  src={view.giftPreview.imageUrl}
+                  alt={view.giftPreview.title}
                   width={72}
                   height={72}
                   className="h-16 w-16 rounded-xl object-cover"
                 />
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-text">{draft.giftData.productName}</p>
-                  <p className="text-sm text-text-muted">
-                    R{(draft.giftData.productPrice / 100).toFixed(2)}
-                  </p>
+                  <p className="text-sm font-semibold text-text">{view.giftPreview.title}</p>
+                  {view.giftPreview.priceLabel ? (
+                    <p className="text-sm text-text-muted">{view.giftPreview.priceLabel}</p>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -281,6 +282,6 @@ export default async function CreateGiftPage({
           </CardContent>
         </Card>
       )}
-    </section>
+    </CreateFlowShell>
   );
 }

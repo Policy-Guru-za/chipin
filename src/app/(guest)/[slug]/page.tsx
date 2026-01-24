@@ -42,6 +42,7 @@ const HeroCard = ({ view }: { view: GuestViewModel }) => {
           alt={view.childName}
           fill
           sizes="128px"
+          priority
           className="object-cover"
         />
       </div>
@@ -77,6 +78,7 @@ const GiftCardSection = ({ view }: { view: GuestViewModel }) => {
       title={cardContent.title}
       subtitle={cardContent.subtitle}
       tag={cardContent.tag}
+      imagePriority
     />
   );
 };

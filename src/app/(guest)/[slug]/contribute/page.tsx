@@ -1,15 +1,15 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 
 import { DreamBoardCard } from '@/components/dream-board/DreamBoardCard';
 import { ContributionForm } from '@/components/forms/ContributionForm';
-import { Button } from '@/components/ui/button';
+import { StateCard } from '@/components/ui/state-card';
 import { getDreamBoardBySlug } from '@/lib/db/queries';
 import { buildDreamBoardMetadata } from '@/lib/dream-boards/metadata';
 import { buildGuestViewModel } from '@/lib/dream-boards/view-model';
 import { getAvailablePaymentProviders } from '@/lib/payments';
+import { uiCopy } from '@/lib/ui/copy';
 
 const getBoard = cache(async (slug: string) => getDreamBoardBySlug(slug));
 
@@ -48,17 +48,16 @@ export default async function ContributionPage({ params }: { params: { slug: str
           imageUrl={view.displayImage}
           title={view.displayTitle}
           subtitle={view.displaySubtitle}
+          imagePriority
         />
-        <div className="rounded-3xl border border-border bg-white p-6 text-center">
-          <p className="text-sm text-text">
-            This Dream Board is no longer accepting contributions.
-          </p>
-          <Link href={`/${board.slug}`}>
-            <Button className="mt-4" variant="outline">
-              Back to Dream Board
-            </Button>
-          </Link>
-        </div>
+        <StateCard
+          variant="closed"
+          body={uiCopy.guest.closed.body}
+          ctaLabel={uiCopy.guest.closed.ctaLabel}
+          ctaHref={`/${board.slug}`}
+          ctaVariant="outline"
+          className="text-center"
+        />
       </section>
     );
   }
@@ -81,6 +80,7 @@ export default async function ContributionPage({ params }: { params: { slug: str
         title={view.displayTitle}
         subtitle={view.displaySubtitle}
         tag={view.showCharityOverflow ? 'Charity overflow' : undefined}
+        imagePriority
       />
 
       {view.showCharityOverflow && view.overflowData ? (
@@ -94,9 +94,11 @@ export default async function ContributionPage({ params }: { params: { slug: str
       ) : null}
 
       {availableProviders.length === 0 ? (
-        <div className="rounded-3xl border border-border bg-subtle p-6 text-center text-sm text-text">
-          Payments are temporarily unavailable. Please check back shortly.
-        </div>
+        <StateCard
+          variant="empty"
+          body={uiCopy.guest.paymentsUnavailable.body}
+          className="text-center"
+        />
       ) : null}
 
       <ContributionForm

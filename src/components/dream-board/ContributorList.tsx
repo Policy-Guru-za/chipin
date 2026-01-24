@@ -1,4 +1,6 @@
 import { formatZarWithCents } from '@/lib/utils/money';
+import { StateCard } from '@/components/ui/state-card';
+import { uiCopy } from '@/lib/ui/copy';
 
 type Contribution = {
   id: string;
@@ -15,7 +17,7 @@ type ContributorListProps = {
 
 export function ContributorList({ contributions }: ContributorListProps) {
   if (!contributions.length) {
-    return <p className="text-sm text-text-muted">No contributions yet.</p>;
+    return <StateCard variant="empty" body={uiCopy.contributions.empty.body} />;
   }
 
   return (

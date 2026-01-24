@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
+import { CreateFlowShell } from '@/components/layout/CreateFlowShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { requireSession } from '@/lib/auth/session';
 import { getDreamBoardDraft, updateDreamBoardDraft } from '@/lib/dream-boards/draft';
 import { isDeadlineWithinRange } from '@/lib/dream-boards/validation';
+import { buildCreateFlowViewModel } from '@/lib/host/create-view-model';
 
 const detailsSchema = z.object({
   payoutEmail: z.string().email(),
@@ -72,7 +74,11 @@ export default async function CreateDetailsPage({
 }) {
   const session = await requireSession();
   const draft = await getDreamBoardDraft(session.hostId);
-  if (!draft?.giftType) {
+  const view = buildCreateFlowViewModel({ step: 'details', draft });
+  if (view.redirectTo) {
+    redirect(view.redirectTo);
+  }
+  if (!draft) {
     redirect('/create/gift');
   }
 
@@ -88,14 +94,7 @@ export default async function CreateDetailsPage({
   })();
 
   return (
-    <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-          Step 3 of 4
-        </p>
-        <h1 className="text-3xl font-display text-text">Almost done!</h1>
-      </div>
-
+    <CreateFlowShell stepLabel={view.stepLabel} title={view.title} subtitle={view.subtitle}>
       <Card>
         <CardHeader>
           <CardTitle>Payout & final details</CardTitle>
@@ -197,6 +196,6 @@ export default async function CreateDetailsPage({
           </form>
         </CardContent>
       </Card>
-    </section>
+    </CreateFlowShell>
   );
 }

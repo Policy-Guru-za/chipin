@@ -2,11 +2,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { CreateFlowShell } from '@/components/layout/CreateFlowShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { requireSession } from '@/lib/auth/session';
 import { clearDreamBoardDraft, getDreamBoardDraft } from '@/lib/dream-boards/draft';
 import { dreamBoardDraftSchema } from '@/lib/dream-boards/schema';
+import { buildCreateFlowViewModel } from '@/lib/host/create-view-model';
 import { generateSlug } from '@/lib/utils/slug';
 import { db } from '@/lib/db';
 import { dreamBoards } from '@/lib/db/schema';
@@ -50,11 +52,9 @@ async function createDreamBoardAction() {
 export default async function CreateReviewPage() {
   const session = await requireSession();
   const draft = await getDreamBoardDraft(session.hostId);
-  if (!draft?.giftType) {
-    redirect('/create/gift');
-  }
-  if (!draft?.payoutEmail || !draft?.deadline) {
-    redirect('/create/details');
+  const view = buildCreateFlowViewModel({ step: 'review', draft });
+  if (view.redirectTo) {
+    redirect(view.redirectTo);
   }
 
   const parsed = dreamBoardDraftSchema.safeParse(draft);
@@ -62,20 +62,10 @@ export default async function CreateReviewPage() {
     redirect('/create');
   }
 
-  const giftTitle =
-    parsed.data.giftData.type === 'takealot_product'
-      ? parsed.data.giftData.productName
-      : parsed.data.giftData.causeName;
+  const giftTitle = view.giftTitle ?? '';
 
   return (
-    <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-          Step 4 of 4
-        </p>
-        <h1 className="text-3xl font-display text-text">Review your Dream Board</h1>
-      </div>
-
+    <CreateFlowShell stepLabel={view.stepLabel} title={view.title} subtitle={view.subtitle}>
       <Card>
         <CardHeader>
           <CardTitle>Guest preview</CardTitle>
@@ -99,7 +89,7 @@ export default async function CreateReviewPage() {
               </div>
             </div>
             <div className="mt-4 text-sm text-text">
-              Goal: R{(parsed.data.goalCents / 100).toFixed(2)}
+              Goal: {view.goalLabel ?? `R${(parsed.data.goalCents / 100).toFixed(2)}`}
             </div>
             {parsed.data.message ? (
               <p className="mt-3 text-sm text-text-muted">“{parsed.data.message}”</p>
@@ -123,6 +113,6 @@ export default async function CreateReviewPage() {
           </form>
         </CardContent>
       </Card>
-    </section>
+    </CreateFlowShell>
   );
 }

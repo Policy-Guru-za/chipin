@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { ProgressBar } from '@/components/dream-board/ProgressBar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { StateCard } from '@/components/ui/state-card';
 import { requireSession } from '@/lib/auth/session';
 import { listDreamBoardsForHost } from '@/lib/db/queries';
-import { formatZar } from '@/lib/utils/money';
+import { buildDashboardViewModel } from '@/lib/host/dashboard-view-model';
+import { uiCopy } from '@/lib/ui/copy';
 
 export default async function HostDashboardPage() {
   const session = await requireSession();
@@ -24,33 +26,26 @@ export default async function HostDashboardPage() {
       </div>
 
       {boards.length === 0 ? (
-        <Card>
-          <CardContent className="py-6 text-sm text-text-muted">
-            You don’t have any Dream Boards yet. Create your first one to get started.
-          </CardContent>
-        </Card>
+        <StateCard variant="empty" body={uiCopy.dashboard.empty.body} />
       ) : (
         <div className="grid gap-6">
           {boards.map((board) => {
-            const percentage = Math.min(
-              100,
-              Math.round((board.raisedCents / board.goalCents) * 100)
-            );
+            const view = buildDashboardViewModel(board);
             return (
               <Card key={board.id}>
                 <CardHeader>
-                  <CardTitle>{board.childName}&apos;s Dream Board</CardTitle>
+                  <CardTitle>{view.boardTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <ProgressBar value={percentage} />
+                  <ProgressBar value={view.percentage} />
                   <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-text">
-                    <span>{formatZar(board.raisedCents)} raised</span>
-                    <span>{board.contributionCount} contributions</span>
+                    <span>{view.raisedLabel} raised</span>
+                    <span>{view.contributionCount} contributions</span>
                     <span className="uppercase tracking-[0.2em] text-text-muted">
-                      {board.status}
+                      {view.statusLabel}
                     </span>
                   </div>
-                  <Link href={`/dashboard/${board.id}`}>
+                  <Link href={view.manageHref}>
                     <Button variant="outline">Manage</Button>
                   </Link>
                 </CardContent>

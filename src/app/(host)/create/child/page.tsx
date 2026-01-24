@@ -2,12 +2,14 @@ import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
+import { CreateFlowShell } from '@/components/layout/CreateFlowShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { requireSession } from '@/lib/auth/session';
 import { getDreamBoardDraft, saveDreamBoardDraft } from '@/lib/dream-boards/draft';
 import { isDateWithinRange } from '@/lib/dream-boards/validation';
+import { buildCreateFlowViewModel } from '@/lib/host/create-view-model';
 import { deleteChildPhoto, UploadChildPhotoError, uploadChildPhoto } from '@/lib/integrations/blob';
 import { log } from '@/lib/observability/logger';
 import * as Sentry from '@sentry/nextjs';
@@ -84,16 +86,10 @@ export default async function CreateChildPage({
   const session = await requireSession();
   const draft = await getDreamBoardDraft(session.hostId);
   const error = searchParams?.error;
+  const view = buildCreateFlowViewModel({ step: 'child', draft });
 
   return (
-    <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-          Step 1 of 4
-        </p>
-        <h1 className="text-3xl font-display text-text">Who’s the birthday star?</h1>
-      </div>
-
+    <CreateFlowShell stepLabel={view.stepLabel} title={view.title} subtitle={view.subtitle}>
       <Card>
         <CardHeader>
           <CardTitle>Child details</CardTitle>
@@ -188,6 +184,6 @@ export default async function CreateChildPage({
           </form>
         </CardContent>
       </Card>
-    </section>
+    </CreateFlowShell>
   );
 }
