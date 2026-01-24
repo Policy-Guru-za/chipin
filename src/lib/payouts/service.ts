@@ -26,12 +26,26 @@ const getRecipientDataForGift = (params: {
   payoutMethod: string;
   giftType: string;
   giftData?: Record<string, unknown> | null;
+  karriCardNumber?: string | null;
 }) => ({
-  email: params.payoutEmail,
-  childName: params.childName,
+  ...(params.payoutMethod === 'karri_card_topup'
+    ? (() => {
+        if (!params.karriCardNumber) {
+          throw new Error('Karri card number is missing');
+        }
+        return {
+          cardNumberEncrypted: params.karriCardNumber,
+          cardholderName: params.childName,
+        };
+      })()
+    : {
+        email: params.payoutEmail,
+        giftData: params.giftData ?? null,
+        productUrl: params.giftData?.productUrl ?? null,
+      }),
   payoutMethod: params.payoutMethod,
   giftType: params.giftType,
-  giftData: params.giftData ?? null,
+  childName: params.childName,
 });
 
 const getRecipientDataForOverflow = (params: {
@@ -40,6 +54,9 @@ const getRecipientDataForOverflow = (params: {
   overflowGiftData?: Record<string, unknown> | null;
 }) => ({
   email: params.payoutEmail,
+  donorEmail: params.payoutEmail,
+  donorName: params.childName,
+  causeId: params.overflowGiftData?.causeId ?? null,
   childName: params.childName,
   overflowGiftData: params.overflowGiftData ?? null,
 });
@@ -94,6 +111,7 @@ const buildPayoutPlans = (params: {
         payoutMethod: board.payoutMethod,
         giftType: board.giftType,
         giftData: board.giftData as Record<string, unknown> | null,
+        karriCardNumber: board.karriCardNumber,
       }),
     });
   }

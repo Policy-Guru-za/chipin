@@ -15,6 +15,13 @@
       "when": 1769244425977,
       "tag": "0001_workable_starbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769250456777,
+      "tag": "0002_tranquil_firestar",
+      "breakpoints": true
     }
   ]
 }

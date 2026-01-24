@@ -15,6 +15,7 @@ export const getDreamBoardPayoutContext = async (dreamBoardId: string) => {
       payoutMethod: dreamBoards.payoutMethod,
       payoutEmail: dreamBoards.payoutEmail,
       overflowGiftData: dreamBoards.overflowGiftData,
+      karriCardNumber: dreamBoards.karriCardNumber,
       status: dreamBoards.status,
       hostEmail: hosts.email,
       hostId: hosts.id,

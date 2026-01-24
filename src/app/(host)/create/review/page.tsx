@@ -38,6 +38,7 @@ async function createDreamBoardAction() {
       goalCents: parsed.data.goalCents,
       payoutMethod: parsed.data.payoutMethod,
       overflowGiftData: parsed.data.overflowGiftData,
+      karriCardNumber: parsed.data.karriCardNumberEncrypted ?? null,
       message: parsed.data.message,
       deadline: new Date(parsed.data.deadline),
       status: 'active',

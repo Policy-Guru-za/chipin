@@ -39,6 +39,7 @@ export type DreamBoardDraftInput = {
   goalCents?: number;
   payoutEmail?: string;
   payoutMethod?: 'takealot_gift_card' | 'karri_card_topup' | 'philanthropy_donation';
+  karriCardNumberEncrypted?: string;
   message?: string;
   deadline?: string;
 };
@@ -54,6 +55,7 @@ export type DreamBoardDraft = {
   goalCents?: number;
   payoutEmail?: string;
   payoutMethod?: 'takealot_gift_card' | 'karri_card_topup' | 'philanthropy_donation';
+  karriCardNumberEncrypted?: string;
   message?: string;
   deadline?: string;
   updatedAt: string;

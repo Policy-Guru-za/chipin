@@ -66,6 +66,9 @@ describe('health endpoints', () => {
       checkDb: vi.fn(async () => ({ ok: true })),
       checkKv: vi.fn(async () => ({ ok: true })),
       checkBlobToken: vi.fn(async () => ({ ok: true })),
+      checkKarriAutomation: vi.fn(async () => ({ ok: true })),
+      checkTakealotGiftCards: vi.fn(async () => ({ ok: true })),
+      checkGivenGainAutomation: vi.fn(async () => ({ ok: true })),
     }));
 
     const { GET } = await loadReadyHandler();

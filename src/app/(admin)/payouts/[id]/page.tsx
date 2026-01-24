@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { requireAdminSession } from '@/lib/auth/session';
 import { listAuditLogsForTarget } from '@/lib/audit';
 import { formatZar, formatZarWithCents } from '@/lib/utils/money';
+import { decryptSensitiveValue } from '@/lib/utils/encryption';
+import { executeAutomatedPayout, isAutomationEnabledForType } from '@/lib/payouts/automation';
 import { getPayoutDetail, listPayoutItemsForPayout } from '@/lib/payouts/queries';
 import { addPayoutNote, completePayout, failPayout } from '@/lib/payouts/service';
 
@@ -25,6 +27,10 @@ const failSchema = z.object({
 const noteSchema = z.object({
   payoutId: z.string().uuid(),
   note: z.string().min(3).max(500),
+});
+
+const automationSchema = z.object({
+  payoutId: z.string().uuid(),
 });
 
 type PayoutDetail = NonNullable<Awaited<ReturnType<typeof getPayoutDetail>>>;
@@ -52,6 +58,7 @@ const errorMessage = (code: string | null) => {
     {
       invalid: 'Check the form input and try again.',
       failed: 'Action failed. Review logs and retry.',
+      'automation-disabled': 'Automation is disabled for this payout type.',
     }[code] ?? 'Something went wrong.'
   );
 };
@@ -81,6 +88,22 @@ const SummaryCard = ({ payout }: { payout: PayoutDetail }) => (
 const RecipientCard = ({ payout }: { payout: PayoutDetail }) => (
   <Card className="space-y-3 p-6">
     <h2 className="text-lg font-semibold">Recipient data</h2>
+    {payout.type === 'karri_card_topup' ? (
+      <div className="rounded-xl border border-border bg-subtle px-4 py-3 text-xs text-text">
+        Karri card:{' '}
+        {(() => {
+          try {
+            const recipient = payout.recipientData as { cardNumberEncrypted?: string } | null;
+            if (!recipient?.cardNumberEncrypted) {
+              return 'Unavailable';
+            }
+            return decryptSensitiveValue(recipient.cardNumberEncrypted);
+          } catch {
+            return 'Unavailable';
+          }
+        })()}
+      </div>
+    ) : null}
     <pre className="whitespace-pre-wrap rounded-xl bg-subtle px-4 py-3 text-xs text-text">
       {JSON.stringify(payout.recipientData, null, 2)}
     </pre>
@@ -183,6 +206,27 @@ const NotesCard = ({ payoutId, auditLogs }: { payoutId: string; auditLogs: Audit
   </Card>
 );
 
+const AutomationCard = ({ payout }: { payout: PayoutDetail }) => {
+  const automationEnabled = isAutomationEnabledForType(payout.type);
+  const disabled = payout.status === 'completed' || !automationEnabled;
+  return (
+    <Card className="space-y-4 p-6">
+      <h2 className="text-lg font-semibold">Automation</h2>
+      <p className="text-sm text-text-muted">
+        {automationEnabled
+          ? 'Trigger automated payout execution with the configured provider.'
+          : 'Automation is disabled for this payout type.'}
+      </p>
+      <form action={automationAction}>
+        <input type="hidden" name="payoutId" value={payout.id} />
+        <Button type="submit" size="sm" disabled={disabled}>
+          Run automated payout
+        </Button>
+      </form>
+    </Card>
+  );
+};
+
 async function completeAction(formData: FormData) {
   'use server';
   const session = await requireAdminSession();
@@ -261,6 +305,34 @@ async function noteAction(formData: FormData) {
   redirect(`/admin/payouts/${parsed.data.payoutId}`);
 }
 
+async function automationAction(formData: FormData) {
+  'use server';
+  const session = await requireAdminSession();
+  const parsed = automationSchema.safeParse({
+    payoutId: formData.get('payoutId'),
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/payouts/${formData.get('payoutId')}?error=invalid`);
+  }
+
+  try {
+    await executeAutomatedPayout({
+      payoutId: parsed.data.payoutId,
+      actor: { type: 'admin', id: session.hostId, email: session.email },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('Automation disabled')) {
+      redirect(`/admin/payouts/${parsed.data.payoutId}?error=automation-disabled`);
+    }
+    redirect(`/admin/payouts/${parsed.data.payoutId}?error=failed`);
+  }
+
+  revalidatePath(`/admin/payouts/${parsed.data.payoutId}`);
+  redirect(`/admin/payouts/${parsed.data.payoutId}`);
+}
+
 export default async function PayoutDetailPage({
   params,
   searchParams,
@@ -306,6 +378,7 @@ export default async function PayoutDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <StatusActions payoutId={payout.id} status={payout.status} />
+        <AutomationCard payout={payout} />
         <NotesCard payoutId={payout.id} auditLogs={auditLogs} />
       </div>
     </div>

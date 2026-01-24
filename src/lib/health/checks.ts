@@ -47,3 +47,41 @@ export const checkBlobToken = async (): Promise<HealthCheckResult> => {
 
   return { ok: true };
 };
+
+const isEnabledFlag = (value?: string) => value === 'true';
+
+export const checkKarriAutomation = async (): Promise<HealthCheckResult> => {
+  if (!isEnabledFlag(process.env.KARRI_AUTOMATION_ENABLED)) {
+    return { ok: true, detail: 'disabled' };
+  }
+  if (!process.env.KARRI_BASE_URL || !process.env.KARRI_API_KEY) {
+    return { ok: false, detail: 'KARRI_BASE_URL or KARRI_API_KEY is not set' };
+  }
+  if (!process.env.CARD_DATA_ENCRYPTION_KEY) {
+    return { ok: false, detail: 'CARD_DATA_ENCRYPTION_KEY is not set' };
+  }
+  return { ok: true };
+};
+
+export const checkTakealotGiftCards = async (): Promise<HealthCheckResult> => {
+  if (!isEnabledFlag(process.env.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED)) {
+    return { ok: true, detail: 'disabled' };
+  }
+  if (!process.env.TAKEALOT_GIFTCARD_API_URL || !process.env.TAKEALOT_GIFTCARD_API_KEY) {
+    return {
+      ok: false,
+      detail: 'TAKEALOT_GIFTCARD_API_URL or TAKEALOT_GIFTCARD_API_KEY is not set',
+    };
+  }
+  return { ok: true };
+};
+
+export const checkGivenGainAutomation = async (): Promise<HealthCheckResult> => {
+  if (!isEnabledFlag(process.env.GIVENGAIN_AUTOMATION_ENABLED)) {
+    return { ok: true, detail: 'disabled' };
+  }
+  if (!process.env.GIVENGAIN_API_URL || !process.env.GIVENGAIN_API_KEY) {
+    return { ok: false, detail: 'GIVENGAIN_API_URL or GIVENGAIN_API_KEY is not set' };
+  }
+  return { ok: true };
+};

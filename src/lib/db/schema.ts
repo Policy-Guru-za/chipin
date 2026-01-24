@@ -91,6 +91,7 @@ export const dreamBoards = pgTable(
     goalCents: integer('goal_cents').notNull(),
     payoutMethod: payoutMethodEnum('payout_method').notNull(),
     overflowGiftData: jsonb('overflow_gift_data'),
+    karriCardNumber: text('karri_card_number'),
     message: text('message'),
     deadline: timestamp('deadline', { withTimezone: true }).notNull(),
     status: dreamBoardStatusEnum('status').notNull().default('draft'),
@@ -114,6 +115,10 @@ export const dreamBoards = pgTable(
         OR
         (${table.giftType} = 'philanthropy' AND ${table.payoutMethod} = 'philanthropy_donation')
       )`
+    ),
+    karriCardRequired: check(
+      'karri_card_required',
+      sql`(${table.payoutMethod} != 'karri_card_topup' OR ${table.karriCardNumber} IS NOT NULL)`
     ),
     overflowRequired: check(
       'overflow_required',

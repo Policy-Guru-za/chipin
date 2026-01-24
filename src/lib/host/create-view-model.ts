@@ -75,10 +75,13 @@ const getGoalLabel = (draft?: DreamBoardDraft) => {
 };
 
 const getCompletionState = (draft?: DreamBoardDraft | null) => {
+  const karriComplete =
+    draft?.payoutMethod !== 'karri_card_topup' || Boolean(draft?.karriCardNumberEncrypted);
   return {
     childComplete: [draft?.childName, draft?.birthdayDate, draft?.childPhotoUrl].every(Boolean),
     giftComplete: [draft?.giftType, draft?.giftData, draft?.goalCents].every(Boolean),
-    detailsComplete: [draft?.payoutEmail, draft?.deadline, draft?.payoutMethod].every(Boolean),
+    detailsComplete:
+      [draft?.payoutEmail, draft?.deadline, draft?.payoutMethod].every(Boolean) && karriComplete,
   };
 };
 

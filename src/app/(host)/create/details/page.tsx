@@ -9,6 +9,7 @@ import { requireSession } from '@/lib/auth/session';
 import { getDreamBoardDraft, updateDreamBoardDraft } from '@/lib/dream-boards/draft';
 import { isDeadlineWithinRange } from '@/lib/dream-boards/validation';
 import { buildCreateFlowViewModel } from '@/lib/host/create-view-model';
+import { encryptSensitiveValue } from '@/lib/utils/encryption';
 
 const detailsSchema = z.object({
   payoutEmail: z.string().email(),
@@ -30,6 +31,7 @@ async function saveDetailsAction(formData: FormData) {
   const payoutEmail = formData.get('payoutEmail');
   const message = formData.get('message');
   const deadline = formData.get('deadline');
+  const karriCardNumber = formData.get('karriCardNumber');
 
   const result = detailsSchema.safeParse({ payoutEmail, message, deadline });
   if (!result.success) {
@@ -41,6 +43,7 @@ async function saveDetailsAction(formData: FormData) {
   }
 
   let payoutMethod: 'takealot_gift_card' | 'karri_card_topup' | 'philanthropy_donation';
+  let karriCardNumberEncrypted: string | undefined = draft.karriCardNumberEncrypted;
 
   if (draft.giftType === 'philanthropy') {
     payoutMethod = 'philanthropy_donation';
@@ -53,9 +56,26 @@ async function saveDetailsAction(formData: FormData) {
     payoutMethod = parsed.data;
   }
 
+  if (payoutMethod === 'karri_card_topup') {
+    if (!process.env.CARD_DATA_ENCRYPTION_KEY) {
+      redirect('/create/details?error=secure');
+    }
+    const rawCard = typeof karriCardNumber === 'string' ? karriCardNumber : '';
+    const sanitizedCard = rawCard.replace(/\s+/g, '').replace(/-/g, '');
+    if (sanitizedCard) {
+      karriCardNumberEncrypted = encryptSensitiveValue(sanitizedCard);
+    }
+    if (!karriCardNumberEncrypted) {
+      redirect('/create/details?error=karri');
+    }
+  } else {
+    karriCardNumberEncrypted = undefined;
+  }
+
   await updateDreamBoardDraft(session.hostId, {
     payoutEmail: result.data.payoutEmail,
     payoutMethod,
+    karriCardNumberEncrypted,
     message: result.data.message?.trim() || undefined,
     deadline: result.data.deadline,
   });
@@ -118,6 +138,16 @@ export default async function CreateDetailsPage({
               Please select a payout method.
             </div>
           ) : null}
+          {error === 'karri' ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              Enter a valid Karri Card number to continue.
+            </div>
+          ) : null}
+          {error === 'secure' ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              Karri Card setup is unavailable right now. Please try again later.
+            </div>
+          ) : null}
 
           <form action={saveDetailsAction} className="space-y-5">
             <div className="space-y-2">
@@ -164,6 +194,25 @@ export default async function CreateDetailsPage({
                     <span className="text-sm text-text">Karri Card top-up</span>
                   </label>
                 </div>
+              </div>
+            ) : null}
+
+            {draft.giftType !== 'philanthropy' ? (
+              <div className="space-y-2">
+                <label htmlFor="karriCardNumber" className="text-sm font-medium text-text">
+                  Karri Card number
+                </label>
+                <Input
+                  id="karriCardNumber"
+                  name="karriCardNumber"
+                  placeholder="Only required for Karri top-ups"
+                  autoComplete="off"
+                />
+                <p className="text-xs text-text-muted">
+                  {draft.karriCardNumberEncrypted
+                    ? 'Card number saved. Re-enter to update.'
+                    : 'We only use this to load Karri top-ups.'}
+                </p>
               </div>
             ) : null}
 

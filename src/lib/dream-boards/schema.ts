@@ -35,6 +35,7 @@ export const dreamBoardDraftSchema = z
     goalCents: z.number().int().positive(),
     payoutEmail: z.string().email(),
     payoutMethod: z.enum(['takealot_gift_card', 'karri_card_topup', 'philanthropy_donation']),
+    karriCardNumberEncrypted: z.string().min(1).optional(),
     message: z.string().max(280).optional(),
     deadline: z.string().min(1),
   })
@@ -58,6 +59,13 @@ export const dreamBoardDraftSchema = z
         code: z.ZodIssueCode.custom,
         path: ['payoutMethod'],
         message: 'Payout method must be philanthropy_donation',
+      });
+    }
+    if (value.payoutMethod === 'karri_card_topup' && !value.karriCardNumberEncrypted) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['karriCardNumberEncrypted'],
+        message: 'Karri card number is required',
       });
     }
   });
