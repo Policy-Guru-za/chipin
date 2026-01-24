@@ -13,6 +13,7 @@
     "test:coverage": "vitest run --coverage",
     "test:payments": "vitest run tests/unit/payfast-*.test.ts tests/unit/ozow-*.test.ts tests/unit/snapscan-*.test.ts tests/unit/payment-*.test.ts",
     "test:webhooks": "vitest run tests/integration/*webhook*.test.ts",
+    "test:payouts": "vitest run tests/unit/payout-*.test.ts tests/integration/*payout*.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:seed": "tsx scripts/seed.ts",

@@ -1,8 +1,19 @@
 import { db } from './index';
-import { apiKeys, contributions, dreamBoards, hosts, payouts, webhookEvents } from './schema';
+import {
+  apiKeys,
+  auditLogs,
+  contributions,
+  dreamBoards,
+  hosts,
+  payoutItems,
+  payouts,
+  webhookEvents,
+} from './schema';
 
 export async function seedDatabase() {
   await db.delete(webhookEvents);
+  await db.delete(auditLogs);
+  await db.delete(payoutItems);
   await db.delete(apiKeys);
   await db.delete(payouts);
   await db.delete(contributions);
@@ -58,17 +69,28 @@ export async function seedDatabase() {
     paymentStatus: 'completed',
   });
 
-  await db.insert(payouts).values({
+  const [payout] = await db
+    .insert(payouts)
+    .values({
+      dreamBoardId: dreamBoard.id,
+      type: 'takealot_gift_card',
+      grossCents: 5000,
+      feeCents: 300,
+      netCents: 4700,
+      recipientData: {
+        email: 'lerato@chipin.co.za',
+        productUrl: 'https://www.takealot.com/demo',
+      },
+      status: 'pending',
+    })
+    .returning({ id: payouts.id });
+
+  await db.insert(payoutItems).values({
+    payoutId: payout.id,
     dreamBoardId: dreamBoard.id,
-    type: 'takealot_gift_card',
-    grossCents: 5000,
-    feeCents: 300,
-    netCents: 4700,
-    recipientData: {
-      email: 'lerato@chipin.co.za',
-      productUrl: 'https://www.takealot.com/demo',
-    },
-    status: 'pending',
+    type: 'gift',
+    amountCents: 4700,
+    metadata: { seeded: true },
   });
 
   const [apiKey] = await db

@@ -2,10 +2,22 @@ import { randomBytes } from 'crypto';
 
 import { kv } from '@vercel/kv';
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 const SESSION_EXPIRY_SECONDS = 60 * 60 * 24 * 7;
 const SESSION_COOKIE_NAME = 'chipin_session';
+
+const getAdminAllowlist = () =>
+  (process.env.ADMIN_EMAIL_ALLOWLIST ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+export const isAdminEmail = (email: string) => {
+  const allowlist = getAdminAllowlist();
+  if (!allowlist.length) return false;
+  return allowlist.includes(email.trim().toLowerCase());
+};
 
 export type Session = {
   id: string;
@@ -59,6 +71,14 @@ export async function requireSession() {
   const session = await getSession();
   if (!session) {
     redirect('/create');
+  }
+  return session;
+}
+
+export async function requireAdminSession() {
+  const session = await requireSession();
+  if (!isAdminEmail(session.email)) {
+    notFound();
   }
   return session;
 }

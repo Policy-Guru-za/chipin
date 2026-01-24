@@ -57,6 +57,10 @@ export const payoutTypeEnum = pgEnum('payout_type', [
   'karri_card_topup',
 ]);
 
+export const payoutItemTypeEnum = pgEnum('payout_item_type', ['gift', 'overflow']);
+
+export const auditActorTypeEnum = pgEnum('audit_actor_type', ['admin', 'host', 'system']);
+
 export const hosts = pgTable(
   'hosts',
   {
@@ -175,10 +179,59 @@ export const payouts = pgTable(
   (table) => ({
     statusIdx: index('idx_payouts_status').on(table.status),
     dreamBoardIdx: index('idx_payouts_dream_board').on(table.dreamBoardId),
+    uniqueDreamBoardType: uniqueIndex('unique_payout_dream_board_type').on(
+      table.dreamBoardId,
+      table.type
+    ),
     validAmounts: check(
       'valid_amounts',
       sql`${table.grossCents} >= ${table.netCents} AND ${table.netCents} >= 0`
     ),
+  })
+);
+
+export const payoutItems = pgTable(
+  'payout_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    payoutId: uuid('payout_id')
+      .notNull()
+      .references(() => payouts.id, { onDelete: 'cascade' }),
+    dreamBoardId: uuid('dream_board_id')
+      .notNull()
+      .references(() => dreamBoards.id, { onDelete: 'cascade' }),
+    type: payoutItemTypeEnum('type').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    payoutIdx: index('idx_payout_items_payout').on(table.payoutId),
+    dreamBoardIdx: index('idx_payout_items_dream_board').on(table.dreamBoardId),
+    typeIdx: index('idx_payout_items_type').on(table.type),
+    uniquePayoutType: uniqueIndex('unique_payout_item_type').on(table.payoutId, table.type),
+    validAmount: check('valid_payout_item_amount', sql`${table.amountCents} >= 0`),
+  })
+);
+
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    actorType: auditActorTypeEnum('actor_type').notNull(),
+    actorId: uuid('actor_id'),
+    actorEmail: varchar('actor_email', { length: 255 }),
+    action: varchar('action', { length: 100 }).notNull(),
+    targetType: varchar('target_type', { length: 50 }).notNull(),
+    targetId: varchar('target_id', { length: 100 }).notNull(),
+    metadata: jsonb('metadata'),
+    ipAddress: inet('ip_address'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    actionIdx: index('idx_audit_logs_action').on(table.action),
+    targetIdx: index('idx_audit_logs_target').on(table.targetType, table.targetId),
+    actorIdx: index('idx_audit_logs_actor').on(table.actorType, table.actorId),
   })
 );
 
