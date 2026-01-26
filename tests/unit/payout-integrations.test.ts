@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createGivenGainDonation } from '@/lib/integrations/givengain';
-import { topUpKarriCard } from '@/lib/integrations/karri';
+import { topUpKarriCard, verifyKarriCard } from '@/lib/integrations/karri';
 import { issueTakealotGiftCard } from '@/lib/integrations/takealot-gift-cards';
 
 describe('payout integrations', () => {
@@ -43,6 +43,23 @@ describe('payout integrations', () => {
 
     expect(result.transactionId).toBe('K123');
     expect(result.status).toBe('completed');
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it('verifies a Karri card', async () => {
+    process.env.KARRI_BASE_URL = 'https://karri.test';
+    process.env.KARRI_API_KEY = 'token';
+
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ valid: true, cardholderFirstName: 'Maya' }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await verifyKarriCard('4111111111111111');
+
+    expect(result.valid).toBe(true);
+    expect(result.cardholderFirstName).toBe('Maya');
     expect(fetchMock).toHaveBeenCalled();
   });
 

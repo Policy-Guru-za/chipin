@@ -14,6 +14,8 @@ import { isDateWithinRange, isDeadlineWithinRange } from '@/lib/dream-boards/val
 import { encryptSensitiveValue } from '@/lib/utils/encryption';
 import { generateSlug } from '@/lib/utils/slug';
 
+import { verifyKarriCardForApi } from './karri';
+
 const listQuerySchema = z.object({
   status: z
     .enum(['draft', 'active', 'funded', 'closed', 'paid_out', 'expired', 'cancelled'])
@@ -367,13 +369,24 @@ export async function POST(request: NextRequest) {
   const parsed = await parseCreatePayload(request, requestId, rateLimitHeaders);
   if (!parsed.ok) return parsed.response;
 
+  const karriVerification = await verifyKarriCardForApi({
+    payoutMethod: parsed.data.payout_method,
+    cardNumber: parsed.data.karri_card_number,
+    requestId,
+    headers: rateLimitHeaders,
+  });
+
+  if (!karriVerification.ok) {
+    return karriVerification.response;
+  }
+
   const giftDataResult = resolveGiftData(parsed.data, requestId, rateLimitHeaders);
   if (!giftDataResult.ok) return giftDataResult.response;
 
   const host = await ensureHostForEmail(parsed.data.payout_email);
   const karriCardNumber =
-    parsed.data.payout_method === 'karri_card_topup' && parsed.data.karri_card_number
-      ? encryptSensitiveValue(parsed.data.karri_card_number)
+    parsed.data.payout_method === 'karri_card_topup' && karriVerification.cardNumber
+      ? encryptSensitiveValue(karriVerification.cardNumber)
       : null;
 
   const created = await insertDreamBoard({

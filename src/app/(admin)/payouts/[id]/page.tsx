@@ -14,6 +14,8 @@ import { executeAutomatedPayout, isAutomationEnabledForType } from '@/lib/payout
 import { getPayoutDetail, listPayoutItemsForPayout } from '@/lib/payouts/queries';
 import { addPayoutNote, completePayout, failPayout } from '@/lib/payouts/service';
 
+import { DocumentsCard } from './documents-card';
+
 const completeSchema = z.object({
   payoutId: z.string().uuid(),
   externalRef: z.string().min(2),
@@ -59,6 +61,8 @@ const errorMessage = (code: string | null) => {
       invalid: 'Check the form input and try again.',
       failed: 'Action failed. Review logs and retry.',
       'automation-disabled': 'Automation is disabled for this payout type.',
+      receipt_invalid: 'Receipt upload failed. Check the file and try again.',
+      receipt_failed: 'Receipt upload failed. Please try again.',
     }[code] ?? 'Something went wrong.'
   );
 };
@@ -379,6 +383,7 @@ export default async function PayoutDetailPage({
       <div className="grid gap-6 lg:grid-cols-2">
         <StatusActions payoutId={payout.id} status={payout.status} />
         <AutomationCard payout={payout} />
+        <DocumentsCard payout={payout} />
         <NotesCard payoutId={payout.id} auditLogs={auditLogs} />
       </div>
     </div>

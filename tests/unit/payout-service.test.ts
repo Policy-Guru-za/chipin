@@ -12,7 +12,7 @@ const auditMocks = vi.hoisted(() => ({
 vi.mock('@/lib/db', () => ({ db: dbMock }));
 vi.mock('@/lib/audit', () => auditMocks);
 
-import { completePayout } from '@/lib/payouts/service';
+import { completePayout, updatePayoutRecipientData } from '@/lib/payouts/service';
 
 describe('payout service', () => {
   beforeEach(() => {
@@ -59,6 +59,39 @@ describe('payout service', () => {
     expect(dbMock.transaction).toHaveBeenCalled();
     expect(auditMocks.recordAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'payout.completed' })
+    );
+  });
+
+  it('updates payout recipient data and writes audit log', async () => {
+    const payoutSelectChain = {
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: vi.fn(async () => [
+            {
+              id: 'payout-2',
+              recipientData: { existing: 'value' },
+            },
+          ]),
+        })),
+      })),
+    };
+
+    dbMock.select.mockReturnValue(payoutSelectChain);
+
+    const updateChain = { set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) };
+    const txUpdate = vi.fn(() => updateChain);
+
+    dbMock.transaction.mockImplementation(async (callback: any) => callback({ update: txUpdate }));
+
+    await updatePayoutRecipientData({
+      payoutId: 'payout-2',
+      data: { receiptUrl: 'https://blob.test/receipt.pdf' },
+      actor: { type: 'admin' },
+    });
+
+    expect(dbMock.transaction).toHaveBeenCalled();
+    expect(auditMocks.recordAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'payout.recipient.updated' })
     );
   });
 });

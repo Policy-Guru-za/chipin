@@ -11,7 +11,7 @@ import { log } from '@/lib/observability/logger';
 import { decryptSensitiveValue } from '@/lib/utils/encryption';
 
 import { getPayoutDetail } from './queries';
-import { completePayout, failPayout } from './service';
+import { completePayout, failPayout, updatePayoutRecipientData } from './service';
 
 type PayoutRecord = NonNullable<Awaited<ReturnType<typeof getPayoutDetail>>>;
 type PayoutType = PayoutRecord['type'];
@@ -48,6 +48,24 @@ const buildDonationMetadata = (result: { receiptUrl?: string; certificateUrl?: s
   if (result.receiptUrl) metadata.receiptUrl = result.receiptUrl;
   if (result.certificateUrl) metadata.certificateUrl = result.certificateUrl;
   return metadata;
+};
+
+const applyDonationDocuments = async (params: {
+  payout: PayoutRecord;
+  actor: AuditActor;
+  metadata: Record<string, unknown>;
+}) => {
+  if (!Object.keys(params.metadata).length) {
+    return;
+  }
+
+  await updatePayoutRecipientData({
+    payoutId: params.payout.id,
+    data: params.metadata,
+    actor: params.actor,
+    action: 'payout.donation.documents',
+    metadata: params.metadata,
+  });
 };
 
 const getCauseId = (payout: PayoutRecord) => {
@@ -247,12 +265,15 @@ const executeDonationPayout = async (
     message: 'ChipIn group gift donation',
   });
 
+  const metadata = buildDonationMetadata(result);
+  await applyDonationDocuments({ payout, actor, metadata });
+
   if (result.status === 'completed') {
     await markCompletedPayout({
       payout,
       externalRef: result.donationId,
       actor,
-      metadata: buildDonationMetadata(result),
+      metadata,
     });
     return { payoutId: payout.id, status: 'completed', externalRef: result.donationId };
   }
@@ -262,7 +283,7 @@ const executeDonationPayout = async (
       payout,
       externalRef: result.donationId,
       actor,
-      metadata: buildDonationMetadata(result),
+      metadata,
     });
     return { payoutId: payout.id, status: 'pending', externalRef: result.donationId };
   }

@@ -10,7 +10,10 @@ import { getDreamBoardDraft, updateDreamBoardDraft } from '@/lib/dream-boards/dr
 import type { DreamBoardDraft } from '@/lib/dream-boards/draft';
 import { isDeadlineWithinRange } from '@/lib/dream-boards/validation';
 import { buildCreateFlowViewModel } from '@/lib/host/create-view-model';
+import { verifyKarriCard } from '@/lib/integrations/karri';
+import { log } from '@/lib/observability/logger';
 import { encryptSensitiveValue } from '@/lib/utils/encryption';
+import * as Sentry from '@sentry/nextjs';
 
 const detailsSchema = z.object({
   payoutEmail: z.string().email(),
@@ -25,6 +28,8 @@ const detailsErrorMessages: Record<string, string> = {
   deadline: 'Deadline must be within the next 90 days.',
   payout: 'Please select a payout method.',
   karri: 'Enter a valid Karri Card number to continue.',
+  karri_invalid: 'Karri Card number could not be verified. Please try again.',
+  karri_unavailable: 'Karri verification is unavailable right now. Please try again later.',
   secure: 'Karri Card setup is unavailable right now. Please try again later.',
 };
 
@@ -54,9 +59,16 @@ const resolvePayoutMethod = (draft: DreamBoardDraft, formData: FormData) => {
   return parsed.data;
 };
 
+const getRawKarriCardNumber = (formData: FormData) => {
+  const rawCard = formData.get('karriCardNumber');
+  const rawValue = typeof rawCard === 'string' ? rawCard : '';
+  const sanitizedCard = rawValue.replace(/\s+/g, '').replace(/-/g, '');
+  return sanitizedCard.length > 0 ? sanitizedCard : null;
+};
+
 const resolveKarriCardNumber = (
   payoutMethod: 'takealot_gift_card' | 'karri_card_topup' | 'philanthropy_donation',
-  formData: FormData,
+  rawCardNumber: string | null,
   draft: DreamBoardDraft
 ) => {
   if (payoutMethod !== 'karri_card_topup') {
@@ -65,14 +77,42 @@ const resolveKarriCardNumber = (
   if (!process.env.CARD_DATA_ENCRYPTION_KEY) {
     redirect('/create/details?error=secure');
   }
-  const rawCard = formData.get('karriCardNumber');
-  const rawValue = typeof rawCard === 'string' ? rawCard : '';
-  const sanitizedCard = rawValue.replace(/\s+/g, '').replace(/-/g, '');
-  const encrypted = sanitizedCard ? encryptSensitiveValue(sanitizedCard) : undefined;
+  const encrypted = rawCardNumber ? encryptSensitiveValue(rawCardNumber) : undefined;
   if (!encrypted && !draft.karriCardNumberEncrypted) {
     redirect('/create/details?error=karri');
   }
   return encrypted ?? draft.karriCardNumberEncrypted;
+};
+
+const verifyKarriCardIfNeeded = async (params: {
+  payoutMethod: 'takealot_gift_card' | 'karri_card_topup' | 'philanthropy_donation';
+  rawKarriCardNumber: string | null;
+  hostId: string;
+}) => {
+  if (
+    params.payoutMethod !== 'karri_card_topup' ||
+    !params.rawKarriCardNumber ||
+    process.env.KARRI_AUTOMATION_ENABLED !== 'true'
+  ) {
+    return;
+  }
+
+  try {
+    const verification = await verifyKarriCard(params.rawKarriCardNumber);
+    if (!verification.valid) {
+      redirect('/create/details?error=karri_invalid');
+    }
+  } catch (error) {
+    log('error', 'karri_card_verify_failed', {
+      hostId: params.hostId,
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+    Sentry.captureException(error, {
+      tags: { area: 'karri', step: 'details' },
+      extra: { hostId: params.hostId },
+    });
+    redirect('/create/details?error=karri_unavailable');
+  }
 };
 
 type DetailsFormProps = {
@@ -195,7 +235,14 @@ async function saveDetailsAction(formData: FormData) {
   }
 
   const payoutMethod = resolvePayoutMethod(draft, formData);
-  const karriCardNumberEncrypted = resolveKarriCardNumber(payoutMethod, formData, draft);
+  const rawKarriCardNumber = getRawKarriCardNumber(formData);
+  await verifyKarriCardIfNeeded({
+    payoutMethod,
+    rawKarriCardNumber,
+    hostId: session.hostId,
+  });
+
+  const karriCardNumberEncrypted = resolveKarriCardNumber(payoutMethod, rawKarriCardNumber, draft);
 
   await updateDreamBoardDraft(session.hostId, {
     payoutEmail: result.data.payoutEmail,

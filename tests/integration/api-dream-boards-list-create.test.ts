@@ -140,4 +140,53 @@ describe('POST /api/v1/dream-boards', () => {
     expect(markApiKeyUsed).toHaveBeenCalledWith('api-key-1');
     expect(insert).toHaveBeenCalled();
   });
+
+  it('rejects normalized-empty karri card numbers', async () => {
+    mockAuth();
+
+    const markApiKeyUsed = vi.fn(async () => undefined);
+    vi.doMock('@/lib/db/queries', () => ({
+      ensureHostForEmail: vi.fn(async () => ({ id: 'host-1' })),
+      markApiKeyUsed,
+    }));
+
+    const insert = vi.fn();
+    vi.doMock('@/lib/db', () => ({ db: { insert } }));
+
+    const { POST } = await loadHandler();
+    const response = await POST(
+      new Request('http://localhost/api/v1/dream-boards', {
+        method: 'POST',
+        body: JSON.stringify({
+          child_name: 'Maya',
+          child_photo_url: 'https://images.example/photo.jpg',
+          birthday_date: new Date().toISOString().split('T')[0],
+          gift_type: 'takealot_product',
+          gift_data: {
+            product_url: 'https://takealot.com/product',
+            product_name: 'Train set',
+            product_image: 'https://images.example/product.jpg',
+            product_price: 35000,
+          },
+          payout_method: 'karri_card_topup',
+          overflow_gift_data: {
+            cause_id: 'food-forward',
+            cause_name: 'Feed Hungry Children',
+            impact_description: 'Feed a class',
+          },
+          goal_cents: 35000,
+          payout_email: 'parent@example.com',
+          deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          karri_card_number: '  - -  ',
+        }),
+      })
+    );
+
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error.code).toBe('validation_error');
+    expect(insert).not.toHaveBeenCalled();
+    expect(markApiKeyUsed).not.toHaveBeenCalled();
+  });
 });

@@ -20,6 +20,13 @@ type PayoutItemRecord = typeof payoutItems.$inferSelect;
 type PayoutType = PayoutRecord['type'];
 type PayoutItemType = PayoutItemRecord['type'];
 
+const normalizeRecipientData = (payload: unknown): PayoutRecipientData => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return {};
+  }
+  return payload as PayoutRecipientData;
+};
+
 const getRecipientDataForGift = (params: {
   payoutEmail: string;
   childName: string;
@@ -345,5 +352,70 @@ export async function addPayoutNote(params: { payoutId: string; note: string; ac
     action: 'payout.note',
     target: { type: 'payout', id: params.payoutId },
     metadata: { note: params.note },
+  });
+}
+
+export async function updatePayoutRecipientData(params: {
+  payoutId: string;
+  data: Record<string, unknown>;
+  actor: AuditActor;
+  action?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const [payout] = await db
+    .select({ id: payouts.id, recipientData: payouts.recipientData })
+    .from(payouts)
+    .where(eq(payouts.id, params.payoutId))
+    .limit(1);
+
+  if (!payout) {
+    throw new Error('Payout not found');
+  }
+
+  const mergedRecipientData = {
+    ...normalizeRecipientData(payout.recipientData),
+    ...params.data,
+  };
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(payouts)
+      .set({ recipientData: mergedRecipientData })
+      .where(eq(payouts.id, payout.id));
+
+    await recordAuditEvent({
+      actor: params.actor,
+      action: params.action ?? 'payout.recipient.updated',
+      target: { type: 'payout', id: payout.id },
+      metadata: params.metadata ?? params.data,
+      database: tx,
+    });
+  });
+
+  return mergedRecipientData;
+}
+
+export async function addPayoutReceipt(params: {
+  payoutId: string;
+  type: 'receipt' | 'certificate';
+  url: string;
+  contentType: string;
+  filename: string;
+  encrypted: boolean;
+  actor: AuditActor;
+}) {
+  const prefix = params.type === 'receipt' ? 'receipt' : 'certificate';
+  const field = `${prefix}Url`;
+  return updatePayoutRecipientData({
+    payoutId: params.payoutId,
+    data: {
+      [field]: params.url,
+      [`${prefix}ContentType`]: params.contentType,
+      [`${prefix}Filename`]: params.filename,
+      [`${prefix}Encrypted`]: params.encrypted,
+    },
+    actor: params.actor,
+    action: 'payout.receipt.uploaded',
+    metadata: { type: params.type, url: params.url },
   });
 }

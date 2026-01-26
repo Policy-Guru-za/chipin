@@ -15,6 +15,7 @@ const payoutQueryMocks = vi.hoisted(() => ({
 const payoutServiceMocks = vi.hoisted(() => ({
   completePayout: vi.fn(),
   failPayout: vi.fn(),
+  updatePayoutRecipientData: vi.fn(),
 }));
 
 const integrationMocks = vi.hoisted(() => ({
