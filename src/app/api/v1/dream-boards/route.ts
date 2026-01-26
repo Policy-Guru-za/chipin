@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
-import { enforceApiAuth } from '@/lib/api/handler';
 import { serializeDreamBoard } from '@/lib/api/dream-boards';
+import { encodeCursor } from '@/lib/api/pagination';
+import { parseBody, parseCursor, parseQuery, withApiAuth } from '@/lib/api/route-utils';
 import { jsonError, jsonPaginated, jsonSuccess } from '@/lib/api/response';
-import { decodeCursor, encodeCursor } from '@/lib/api/pagination';
 import { listDreamBoardsForApi } from '@/lib/db/api-queries';
-import { ensureHostForEmail, markApiKeyUsed } from '@/lib/db/queries';
+import { ensureHostForEmail } from '@/lib/db/queries';
 import { db } from '@/lib/db';
 import { dreamBoards } from '@/lib/db/schema';
 import { getCauseById } from '@/lib/dream-boards/causes';
@@ -165,25 +165,11 @@ const buildPhilanthropyGiftData = (payload: CreatePayload['gift_data']) => {
 };
 
 const parseCreatePayload = async (request: NextRequest, requestId: string, headers: Headers) => {
-  const body = await request.json().catch(() => null);
-  const parsed = createSchema.safeParse(body);
-  if (!parsed.success) {
-    return {
-      ok: false as const,
-      response: jsonError({
-        error: {
-          code: 'validation_error',
-          message: 'Invalid dream board payload',
-          details: parsed.error.flatten(),
-        },
-        status: 400,
-        requestId,
-        headers,
-      }),
-    };
-  }
-
-  return { ok: true as const, data: parsed.data };
+  return parseBody(request, createSchema, {
+    requestId,
+    headers,
+    message: 'Invalid dream board payload',
+  });
 };
 
 const resolveGiftData = (payload: CreatePayload, requestId: string, headers: Headers) => {
@@ -289,41 +275,27 @@ const insertDreamBoard = async (params: {
   return created;
 };
 
-export async function GET(request: NextRequest) {
-  const auth = await enforceApiAuth(request, 'dreamboards:read');
-  if (!auth.ok) return auth.response;
-  const { requestId, apiKey, rateLimitHeaders } = auth.context;
+export const GET = withApiAuth('dreamboards:read', async (request: NextRequest, context) => {
+  const { requestId, rateLimitHeaders } = context;
 
-  const params = Object.fromEntries(new URL(request.url).searchParams.entries());
-  const parsed = listQuerySchema.safeParse(params);
-  if (!parsed.success) {
-    return jsonError({
-      error: {
-        code: 'validation_error',
-        message: 'Invalid query parameters',
-        details: parsed.error.flatten(),
-      },
-      status: 400,
-      requestId,
-      headers: rateLimitHeaders,
-    });
-  }
+  const parsed = parseQuery(request, listQuerySchema, {
+    requestId,
+    headers: rateLimitHeaders,
+    message: 'Invalid query parameters',
+  });
+  if (!parsed.ok) return parsed.response;
 
-  const cursor = decodeCursor(parsed.data.after);
-  if (parsed.data.after && !cursor) {
-    return jsonError({
-      error: { code: 'validation_error', message: 'Invalid pagination cursor' },
-      status: 400,
-      requestId,
-      headers: rateLimitHeaders,
-    });
-  }
+  const cursorResult = parseCursor(parsed.data.after, {
+    requestId,
+    headers: rateLimitHeaders,
+  });
+  if (!cursorResult.ok) return cursorResult.response;
 
-  const limit = parsed.data.limit;
+  const limit = parsed.data.limit ?? 20;
   const rows = await listDreamBoardsForApi({
     status: parsed.data.status,
     limit: limit + 1,
-    cursor,
+    cursor: cursorResult.cursor,
   });
 
   const hasMore = rows.length > limit;
@@ -344,8 +316,6 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  await markApiKeyUsed(apiKey.id);
-
   const nextCursor =
     hasMore && items.length
       ? encodeCursor({
@@ -360,12 +330,10 @@ export async function GET(request: NextRequest) {
     requestId,
     headers: rateLimitHeaders,
   });
-}
+});
 
-export async function POST(request: NextRequest) {
-  const auth = await enforceApiAuth(request, 'dreamboards:write');
-  if (!auth.ok) return auth.response;
-  const { requestId, apiKey, rateLimitHeaders } = auth.context;
+export const POST = withApiAuth('dreamboards:write', async (request: NextRequest, context) => {
+  const { requestId, rateLimitHeaders } = context;
   const parsed = await parseCreatePayload(request, requestId, rateLimitHeaders);
   if (!parsed.ok) return parsed.response;
 
@@ -438,7 +406,10 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  await markApiKeyUsed(apiKey.id);
-
-  return jsonSuccess({ data: responsePayload, requestId, status: 201, headers: rateLimitHeaders });
-}
+  return jsonSuccess({
+    data: responsePayload,
+    requestId,
+    status: 201,
+    headers: rateLimitHeaders,
+  });
+});

@@ -73,21 +73,39 @@
           "200": {
             "description": "Dream boards list",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/DreamBoardListResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/DreamBoardListResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       },
       "post": {
@@ -97,7 +115,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/DreamBoardCreateRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/DreamBoardCreateRequest"
+              }
             }
           }
         },
@@ -105,22 +125,42 @@
           "201": {
             "description": "Dream board created",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/DreamBoardResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/DreamBoardResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "409": { "$ref": "#/components/responses/ConflictError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -128,27 +168,51 @@
       "get": {
         "tags": ["Dream Boards"],
         "summary": "Get a dream board",
-        "parameters": [{ "$ref": "#/components/parameters/DreamBoardId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DreamBoardId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Dream board",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/DreamBoardResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/DreamBoardResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "404": { "$ref": "#/components/responses/NotFoundError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -157,11 +221,15 @@
         "tags": ["Contributions"],
         "summary": "List contributions for a dream board",
         "parameters": [
-          { "$ref": "#/components/parameters/DreamBoardId" },
+          {
+            "$ref": "#/components/parameters/DreamBoardId"
+          },
           {
             "name": "status",
             "in": "query",
-            "schema": { "$ref": "#/components/schemas/ContributionStatus" }
+            "schema": {
+              "$ref": "#/components/schemas/ContributionStatus"
+            }
           },
           {
             "name": "limit",
@@ -176,29 +244,51 @@
           {
             "name": "after",
             "in": "query",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Contribution list",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ContributionListResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionListResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "404": { "$ref": "#/components/responses/NotFoundError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -206,27 +296,51 @@
       "get": {
         "tags": ["Contributions"],
         "summary": "Get a contribution",
-        "parameters": [{ "$ref": "#/components/parameters/ContributionId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ContributionId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Contribution",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ContributionResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "404": { "$ref": "#/components/responses/NotFoundError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -238,7 +352,9 @@
           {
             "name": "type",
             "in": "query",
-            "schema": { "$ref": "#/components/schemas/PayoutType" }
+            "schema": {
+              "$ref": "#/components/schemas/PayoutType"
+            }
           },
           {
             "name": "limit",
@@ -253,28 +369,48 @@
           {
             "name": "after",
             "in": "query",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Pending payout list",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PayoutListResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutListResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -282,27 +418,51 @@
       "get": {
         "tags": ["Payouts"],
         "summary": "Get a payout",
-        "parameters": [{ "$ref": "#/components/parameters/PayoutId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PayoutId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Payout",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PayoutResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "404": { "$ref": "#/components/responses/NotFoundError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -310,12 +470,18 @@
       "post": {
         "tags": ["Payouts"],
         "summary": "Confirm a payout",
-        "parameters": [{ "$ref": "#/components/parameters/PayoutId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PayoutId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PayoutConfirmRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/PayoutConfirmRequest"
+              }
             }
           }
         },
@@ -323,22 +489,42 @@
           "200": {
             "description": "Payout confirmed",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PayoutResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "404": { "$ref": "#/components/responses/NotFoundError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -346,12 +532,18 @@
       "post": {
         "tags": ["Payouts"],
         "summary": "Fail a payout",
-        "parameters": [{ "$ref": "#/components/parameters/PayoutId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PayoutId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PayoutFailRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/PayoutFailRequest"
+              }
             }
           }
         },
@@ -359,22 +551,42 @@
           "200": {
             "description": "Payout failed",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PayoutResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "404": { "$ref": "#/components/responses/NotFoundError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -386,20 +598,36 @@
           "200": {
             "description": "Webhook list",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/WebhookListResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookListResponse"
+                }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       },
       "post": {
@@ -409,7 +637,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/WebhookCreateRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/WebhookCreateRequest"
+              }
             }
           }
         },
@@ -417,21 +647,39 @@
           "201": {
             "description": "Webhook created",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/WebhookResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -439,27 +687,51 @@
       "delete": {
         "tags": ["Webhooks"],
         "summary": "Deactivate webhook endpoint",
-        "parameters": [{ "$ref": "#/components/parameters/WebhookId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Webhook deactivated",
             "headers": {
-              "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/WebhookDeleteResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDeleteResponse"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/UnauthorizedError" },
-          "403": { "$ref": "#/components/responses/ForbiddenError" },
-          "404": { "$ref": "#/components/responses/NotFoundError" },
-          "429": { "$ref": "#/components/responses/RateLimitError" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     }
@@ -518,15 +790,21 @@
     },
     "headers": {
       "RateLimitLimit": {
-        "schema": { "type": "integer" },
+        "schema": {
+          "type": "integer"
+        },
         "description": "Hourly rate limit quota."
       },
       "RateLimitRemaining": {
-        "schema": { "type": "integer" },
+        "schema": {
+          "type": "integer"
+        },
         "description": "Remaining requests in the current window."
       },
       "RateLimitReset": {
-        "schema": { "type": "integer" },
+        "schema": {
+          "type": "integer"
+        },
         "description": "Epoch time when the rate limit resets."
       }
     },
@@ -535,7 +813,9 @@
         "description": "Unauthorized",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
           }
         }
       },
@@ -543,7 +823,9 @@
         "description": "Forbidden",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
           }
         }
       },
@@ -551,7 +833,9 @@
         "description": "Validation error",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
           }
         }
       },
@@ -559,7 +843,9 @@
         "description": "Not found",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
           }
         }
       },
@@ -567,24 +853,36 @@
         "description": "Conflict",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
           }
         }
       },
       "RateLimitError": {
         "description": "Rate limited",
         "headers": {
-          "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-          "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-          "X-RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" },
+          "X-RateLimit-Limit": {
+            "$ref": "#/components/headers/RateLimitLimit"
+          },
+          "X-RateLimit-Remaining": {
+            "$ref": "#/components/headers/RateLimitRemaining"
+          },
+          "X-RateLimit-Reset": {
+            "$ref": "#/components/headers/RateLimitReset"
+          },
           "Retry-After": {
-            "schema": { "type": "integer" },
+            "schema": {
+              "type": "integer"
+            },
             "description": "Seconds to wait before retrying."
           }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
           }
         }
       },
@@ -592,7 +890,9 @@
         "description": "Internal error",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
           }
         }
       }
@@ -602,8 +902,13 @@
         "type": "object",
         "required": ["request_id", "timestamp"],
         "properties": {
-          "request_id": { "type": "string" },
-          "timestamp": { "type": "string", "format": "date-time" }
+          "request_id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "ApiError": {
@@ -622,25 +927,41 @@
               "internal_error"
             ]
           },
-          "message": { "type": "string" },
-          "details": { "type": "object", "additionalProperties": true }
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
         }
       },
       "ErrorResponse": {
         "type": "object",
         "required": ["error", "meta"],
         "properties": {
-          "error": { "$ref": "#/components/schemas/ApiError" },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       },
       "Pagination": {
         "type": "object",
         "required": ["has_more", "next_cursor"],
         "properties": {
-          "has_more": { "type": "boolean" },
-          "next_cursor": { "type": "string", "nullable": true },
-          "total_count": { "type": "integer" }
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "total_count": {
+            "type": "integer"
+          }
         }
       },
       "DreamBoardStatus": {
@@ -663,29 +984,53 @@
         "type": "object",
         "required": ["product_url", "product_name", "product_image", "product_price"],
         "properties": {
-          "product_url": { "type": "string", "format": "uri" },
-          "product_name": { "type": "string" },
-          "product_image": { "type": "string", "format": "uri" },
-          "product_price": { "type": "integer" }
+          "product_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "product_image": {
+            "type": "string",
+            "format": "uri"
+          },
+          "product_price": {
+            "type": "integer"
+          }
         }
       },
       "PhilanthropyGift": {
         "type": "object",
         "required": ["cause_id", "cause_name", "impact_description", "amount_cents"],
         "properties": {
-          "cause_id": { "type": "string" },
-          "cause_name": { "type": "string" },
-          "impact_description": { "type": "string" },
-          "amount_cents": { "type": "integer" }
+          "cause_id": {
+            "type": "string"
+          },
+          "cause_name": {
+            "type": "string"
+          },
+          "impact_description": {
+            "type": "string"
+          },
+          "amount_cents": {
+            "type": "integer"
+          }
         }
       },
       "OverflowGift": {
         "type": "object",
         "required": ["cause_id", "cause_name", "impact_description"],
         "properties": {
-          "cause_id": { "type": "string" },
-          "cause_name": { "type": "string" },
-          "impact_description": { "type": "string" }
+          "cause_id": {
+            "type": "string"
+          },
+          "cause_name": {
+            "type": "string"
+          },
+          "impact_description": {
+            "type": "string"
+          }
         }
       },
       "DreamBoard": {
@@ -711,31 +1056,82 @@
           "updated_at"
         ],
         "properties": {
-          "id": { "type": "string", "example": "db_abc123" },
-          "slug": { "type": "string" },
-          "child_name": { "type": "string" },
-          "child_photo_url": { "type": "string", "format": "uri" },
-          "birthday_date": { "type": "string", "format": "date" },
-          "gift_type": { "$ref": "#/components/schemas/GiftType" },
+          "id": {
+            "type": "string",
+            "example": "db_abc123"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "child_name": {
+            "type": "string"
+          },
+          "child_photo_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "birthday_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "gift_type": {
+            "$ref": "#/components/schemas/GiftType"
+          },
           "gift_data": {
             "oneOf": [
-              { "$ref": "#/components/schemas/TakealotGift" },
-              { "$ref": "#/components/schemas/PhilanthropyGift" }
+              {
+                "$ref": "#/components/schemas/TakealotGift"
+              },
+              {
+                "$ref": "#/components/schemas/PhilanthropyGift"
+              }
             ]
           },
-          "payout_method": { "$ref": "#/components/schemas/PayoutMethod" },
-          "overflow_gift_data": { "$ref": "#/components/schemas/OverflowGift", "nullable": true },
-          "goal_cents": { "type": "integer" },
-          "raised_cents": { "type": "integer" },
-          "overflow_cents": { "type": "integer" },
-          "message": { "type": "string", "nullable": true },
-          "deadline": { "type": "string", "format": "date-time" },
-          "status": { "$ref": "#/components/schemas/DreamBoardStatus" },
-          "display_mode": { "$ref": "#/components/schemas/DisplayMode" },
-          "contribution_count": { "type": "integer" },
-          "public_url": { "type": "string", "format": "uri" },
-          "created_at": { "type": "string", "format": "date-time" },
-          "updated_at": { "type": "string", "format": "date-time" }
+          "payout_method": {
+            "$ref": "#/components/schemas/PayoutMethod"
+          },
+          "overflow_gift_data": {
+            "$ref": "#/components/schemas/OverflowGift",
+            "nullable": true
+          },
+          "goal_cents": {
+            "type": "integer"
+          },
+          "raised_cents": {
+            "type": "integer"
+          },
+          "overflow_cents": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DreamBoardStatus"
+          },
+          "display_mode": {
+            "$ref": "#/components/schemas/DisplayMode"
+          },
+          "contribution_count": {
+            "type": "integer"
+          },
+          "public_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "DreamBoardCreateRequest": {
@@ -752,34 +1148,78 @@
           "deadline"
         ],
         "properties": {
-          "child_name": { "type": "string", "minLength": 2, "maxLength": 50 },
-          "child_photo_url": { "type": "string", "format": "uri" },
-          "birthday_date": { "type": "string", "format": "date" },
-          "gift_type": { "$ref": "#/components/schemas/GiftType" },
+          "child_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          },
+          "child_photo_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "birthday_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "gift_type": {
+            "$ref": "#/components/schemas/GiftType"
+          },
           "gift_data": {
             "oneOf": [
-              { "$ref": "#/components/schemas/TakealotGift" },
+              {
+                "$ref": "#/components/schemas/TakealotGift"
+              },
               {
                 "type": "object",
                 "required": ["cause_id", "cause_name", "impact_description", "amount_cents"],
                 "properties": {
-                  "cause_id": { "type": "string" },
-                  "cause_name": { "type": "string" },
-                  "impact_description": { "type": "string" },
-                  "amount_cents": { "type": "integer" },
-                  "cause_description": { "type": "string" },
-                  "cause_image": { "type": "string" }
+                  "cause_id": {
+                    "type": "string"
+                  },
+                  "cause_name": {
+                    "type": "string"
+                  },
+                  "impact_description": {
+                    "type": "string"
+                  },
+                  "amount_cents": {
+                    "type": "integer"
+                  },
+                  "cause_description": {
+                    "type": "string"
+                  },
+                  "cause_image": {
+                    "type": "string"
+                  }
                 }
               }
             ]
           },
-          "payout_method": { "$ref": "#/components/schemas/PayoutMethod" },
-          "overflow_gift_data": { "$ref": "#/components/schemas/OverflowGift" },
-          "goal_cents": { "type": "integer", "minimum": 2000 },
-          "payout_email": { "type": "string", "format": "email" },
-          "message": { "type": "string", "maxLength": 280 },
-          "deadline": { "type": "string", "format": "date-time" },
-          "karri_card_number": { "type": "string" }
+          "payout_method": {
+            "$ref": "#/components/schemas/PayoutMethod"
+          },
+          "overflow_gift_data": {
+            "$ref": "#/components/schemas/OverflowGift"
+          },
+          "goal_cents": {
+            "type": "integer",
+            "minimum": 2000
+          },
+          "payout_email": {
+            "type": "string",
+            "format": "email"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 280
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "karri_card_number": {
+            "type": "string"
+          }
         },
         "description": "Overflow gift data is required for takealot_product. karri_card_number is required for karri_card_topup."
       },
@@ -787,17 +1227,30 @@
         "type": "object",
         "required": ["data", "meta"],
         "properties": {
-          "data": { "$ref": "#/components/schemas/DreamBoard" },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "data": {
+            "$ref": "#/components/schemas/DreamBoard"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       },
       "DreamBoardListResponse": {
         "type": "object",
         "required": ["data", "pagination", "meta"],
         "properties": {
-          "data": { "type": "array", "items": { "$ref": "#/components/schemas/DreamBoard" } },
-          "pagination": { "$ref": "#/components/schemas/Pagination" },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DreamBoard"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       },
       "ContributionStatus": {
@@ -816,32 +1269,67 @@
           "created_at"
         ],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "dream_board_id": { "type": "string" },
-          "contributor_name": { "type": "string", "nullable": true },
-          "message": { "type": "string", "nullable": true },
-          "amount_cents": { "type": "integer" },
-          "fee_cents": { "type": "integer" },
-          "net_cents": { "type": "integer" },
-          "payment_status": { "$ref": "#/components/schemas/ContributionStatus" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dream_board_id": {
+            "type": "string"
+          },
+          "contributor_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount_cents": {
+            "type": "integer"
+          },
+          "fee_cents": {
+            "type": "integer"
+          },
+          "net_cents": {
+            "type": "integer"
+          },
+          "payment_status": {
+            "$ref": "#/components/schemas/ContributionStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "ContributionResponse": {
         "type": "object",
         "required": ["data", "meta"],
         "properties": {
-          "data": { "$ref": "#/components/schemas/Contribution" },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "data": {
+            "$ref": "#/components/schemas/Contribution"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       },
       "ContributionListResponse": {
         "type": "object",
         "required": ["data", "pagination", "meta"],
         "properties": {
-          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Contribution" } },
-          "pagination": { "$ref": "#/components/schemas/Pagination" },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Contribution"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       },
       "PayoutType": {
@@ -855,23 +1343,54 @@
       "PayoutRecipientData": {
         "type": "object",
         "properties": {
-          "email": { "type": "string", "format": "email" },
-          "donor_email": { "type": "string", "format": "email" },
-          "donor_name": { "type": "string" },
-          "child_name": { "type": "string" },
-          "payout_method": { "$ref": "#/components/schemas/PayoutMethod" },
-          "gift_type": { "$ref": "#/components/schemas/GiftType" },
-          "product_url": { "type": "string", "format": "uri" },
-          "cause_id": { "type": "string" },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "donor_email": {
+            "type": "string",
+            "format": "email"
+          },
+          "donor_name": {
+            "type": "string"
+          },
+          "child_name": {
+            "type": "string"
+          },
+          "payout_method": {
+            "$ref": "#/components/schemas/PayoutMethod"
+          },
+          "gift_type": {
+            "$ref": "#/components/schemas/GiftType"
+          },
+          "product_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "cause_id": {
+            "type": "string"
+          },
           "gift_data": {
             "oneOf": [
-              { "$ref": "#/components/schemas/TakealotGift" },
-              { "$ref": "#/components/schemas/PhilanthropyGift" }
+              {
+                "$ref": "#/components/schemas/TakealotGift"
+              },
+              {
+                "$ref": "#/components/schemas/PhilanthropyGift"
+              }
             ]
           },
-          "overflow_gift_data": { "$ref": "#/components/schemas/OverflowGift" },
-          "card_number_last4": { "type": "string", "nullable": true },
-          "card_number_masked": { "type": "string", "nullable": true }
+          "overflow_gift_data": {
+            "$ref": "#/components/schemas/OverflowGift"
+          },
+          "card_number_last4": {
+            "type": "string",
+            "nullable": true
+          },
+          "card_number_masked": {
+            "type": "string",
+            "nullable": true
+          }
         }
       },
       "Payout": {
@@ -887,54 +1406,104 @@
           "created_at"
         ],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "dream_board_id": { "type": "string" },
-          "type": { "$ref": "#/components/schemas/PayoutType" },
-          "gross_cents": { "type": "integer" },
-          "fee_cents": { "type": "integer" },
-          "net_cents": { "type": "integer" },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dream_board_id": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PayoutType"
+          },
+          "gross_cents": {
+            "type": "integer"
+          },
+          "fee_cents": {
+            "type": "integer"
+          },
+          "net_cents": {
+            "type": "integer"
+          },
           "recipient_data": {
             "$ref": "#/components/schemas/PayoutRecipientData",
             "nullable": true
           },
-          "status": { "$ref": "#/components/schemas/PayoutStatus" },
-          "external_ref": { "type": "string", "nullable": true },
-          "error_message": { "type": "string", "nullable": true },
-          "created_at": { "type": "string", "format": "date-time" },
-          "completed_at": { "type": "string", "format": "date-time", "nullable": true }
+          "status": {
+            "$ref": "#/components/schemas/PayoutStatus"
+          },
+          "external_ref": {
+            "type": "string",
+            "nullable": true
+          },
+          "error_message": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
         }
       },
       "PayoutResponse": {
         "type": "object",
         "required": ["data", "meta"],
         "properties": {
-          "data": { "$ref": "#/components/schemas/Payout" },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "data": {
+            "$ref": "#/components/schemas/Payout"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       },
       "PayoutListResponse": {
         "type": "object",
         "required": ["data", "pagination", "meta"],
         "properties": {
-          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Payout" } },
-          "pagination": { "$ref": "#/components/schemas/Pagination" },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Payout"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       },
       "PayoutConfirmRequest": {
         "type": "object",
         "required": ["external_ref"],
         "properties": {
-          "external_ref": { "type": "string" },
-          "completed_at": { "type": "string", "format": "date-time" }
+          "external_ref": {
+            "type": "string"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "PayoutFailRequest": {
         "type": "object",
         "required": ["error_message"],
         "properties": {
-          "error_code": { "type": "string" },
-          "error_message": { "type": "string" }
+          "error_code": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": "string"
+          }
         }
       },
       "WebhookEvent": {
@@ -954,36 +1523,74 @@
         "type": "object",
         "required": ["id", "url", "events", "is_active", "created_at"],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "url": { "type": "string", "format": "uri" },
-          "events": { "type": "array", "items": { "$ref": "#/components/schemas/WebhookEvent" } },
-          "is_active": { "type": "boolean" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebhookEvent"
+            }
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "WebhookCreateRequest": {
         "type": "object",
         "required": ["url", "events", "secret"],
         "properties": {
-          "url": { "type": "string", "format": "uri" },
-          "events": { "type": "array", "items": { "$ref": "#/components/schemas/WebhookEvent" } },
-          "secret": { "type": "string", "minLength": 8 }
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebhookEvent"
+            }
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 8
+          }
         }
       },
       "WebhookResponse": {
         "type": "object",
         "required": ["data", "meta"],
         "properties": {
-          "data": { "$ref": "#/components/schemas/WebhookEndpoint" },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "data": {
+            "$ref": "#/components/schemas/WebhookEndpoint"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       },
       "WebhookListResponse": {
         "type": "object",
         "required": ["data", "meta"],
         "properties": {
-          "data": { "type": "array", "items": { "$ref": "#/components/schemas/WebhookEndpoint" } },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebhookEndpoint"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       },
       "WebhookDeleteResponse": {
@@ -994,10 +1601,15 @@
             "type": "object",
             "required": ["id"],
             "properties": {
-              "id": { "type": "string", "format": "uuid" }
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
             }
           },
-          "meta": { "$ref": "#/components/schemas/ApiMeta" }
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          }
         }
       }
     }

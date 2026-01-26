@@ -1,10 +1,9 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
-import { enforceApiAuth } from '@/lib/api/handler';
+import { parseBody, withApiAuth } from '@/lib/api/route-utils';
 import { jsonError, jsonSuccess } from '@/lib/api/response';
 import { createWebhookEndpoint, listWebhookEndpointsForApiKey } from '@/lib/db/api-queries';
-import { markApiKeyUsed } from '@/lib/db/queries';
 import { encryptSensitiveValue } from '@/lib/utils/encryption';
 
 const eventSchema = z.enum([
@@ -24,13 +23,10 @@ const requestSchema = z.object({
   secret: z.string().min(8),
 });
 
-export async function GET(request: NextRequest) {
-  const auth = await enforceApiAuth(request, 'webhooks:manage');
-  if (!auth.ok) return auth.response;
-  const { requestId, apiKey, rateLimitHeaders } = auth.context;
+export const GET = withApiAuth('webhooks:manage', async (_request: NextRequest, context) => {
+  const { requestId, apiKey, rateLimitHeaders } = context;
 
   const endpoints = await listWebhookEndpointsForApiKey(apiKey.id);
-  await markApiKeyUsed(apiKey.id);
 
   return jsonSuccess({
     data: endpoints.map((endpoint) => ({
@@ -43,27 +39,17 @@ export async function GET(request: NextRequest) {
     requestId,
     headers: rateLimitHeaders,
   });
-}
+});
 
-export async function POST(request: NextRequest) {
-  const auth = await enforceApiAuth(request, 'webhooks:manage');
-  if (!auth.ok) return auth.response;
-  const { requestId, apiKey, rateLimitHeaders } = auth.context;
+export const POST = withApiAuth('webhooks:manage', async (request: NextRequest, context) => {
+  const { requestId, apiKey, rateLimitHeaders } = context;
 
-  const body = await request.json().catch(() => null);
-  const parsed = requestSchema.safeParse(body);
-  if (!parsed.success) {
-    return jsonError({
-      error: {
-        code: 'validation_error',
-        message: 'Invalid webhook payload',
-        details: parsed.error.flatten(),
-      },
-      status: 400,
-      requestId,
-      headers: rateLimitHeaders,
-    });
-  }
+  const parsed = await parseBody(request, requestSchema, {
+    requestId,
+    headers: rateLimitHeaders,
+    message: 'Invalid webhook payload',
+  });
+  if (!parsed.ok) return parsed.response;
 
   const created = await createWebhookEndpoint({
     apiKeyId: apiKey.id,
@@ -81,8 +67,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  await markApiKeyUsed(apiKey.id);
-
   return jsonSuccess({
     data: {
       id: created.id,
@@ -95,4 +79,4 @@ export async function POST(request: NextRequest) {
     status: 201,
     headers: rateLimitHeaders,
   });
-}
+});

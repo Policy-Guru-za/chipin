@@ -1,12 +1,11 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 
-import { enforceApiAuth } from '@/lib/api/handler';
-import { decodeCursor, encodeCursor } from '@/lib/api/pagination';
+import { encodeCursor } from '@/lib/api/pagination';
+import { parseCursor, parseQuery, withApiAuth } from '@/lib/api/route-utils';
 import { jsonError, jsonPaginated } from '@/lib/api/response';
 import { serializePayout } from '@/lib/api/payouts';
 import { listPendingPayoutsForApi } from '@/lib/db/api-queries';
-import { markApiKeyUsed } from '@/lib/db/queries';
 
 const querySchema = z.object({
   type: z.enum(['takealot_gift_card', 'philanthropy_donation', 'karri_card_topup']).optional(),
@@ -14,42 +13,27 @@ const querySchema = z.object({
   after: z.string().optional(),
 });
 
-export async function GET(request: NextRequest) {
-  const auth = await enforceApiAuth(request, 'payouts:read');
-  if (!auth.ok) return auth.response;
-  const { requestId, apiKey, rateLimitHeaders } = auth.context;
+export const GET = withApiAuth('payouts:read', async (request: NextRequest, context) => {
+  const { requestId, rateLimitHeaders } = context;
 
-  const parsedQuery = querySchema.safeParse(
-    Object.fromEntries(new URL(request.url).searchParams.entries())
-  );
-  if (!parsedQuery.success) {
-    return jsonError({
-      error: {
-        code: 'validation_error',
-        message: 'Invalid query parameters',
-        details: parsedQuery.error.flatten(),
-      },
-      status: 400,
-      requestId,
-      headers: rateLimitHeaders,
-    });
-  }
+  const parsedQuery = parseQuery(request, querySchema, {
+    requestId,
+    headers: rateLimitHeaders,
+    message: 'Invalid query parameters',
+  });
+  if (!parsedQuery.ok) return parsedQuery.response;
 
-  const cursor = decodeCursor(parsedQuery.data.after);
-  if (parsedQuery.data.after && !cursor) {
-    return jsonError({
-      error: { code: 'validation_error', message: 'Invalid pagination cursor' },
-      status: 400,
-      requestId,
-      headers: rateLimitHeaders,
-    });
-  }
+  const cursorResult = parseCursor(parsedQuery.data.after, {
+    requestId,
+    headers: rateLimitHeaders,
+  });
+  if (!cursorResult.ok) return cursorResult.response;
 
-  const limit = parsedQuery.data.limit;
+  const limit = parsedQuery.data.limit ?? 20;
   const rows = await listPendingPayoutsForApi({
     type: parsedQuery.data.type,
     limit: limit + 1,
-    cursor,
+    cursor: cursorResult.cursor,
   });
 
   const hasMore = rows.length > limit;
@@ -63,12 +47,10 @@ export async function GET(request: NextRequest) {
         })
       : null;
 
-  await markApiKeyUsed(apiKey.id);
-
   return jsonPaginated({
     data: serialized,
     pagination: { has_more: hasMore, next_cursor: nextCursor },
     requestId,
     headers: rateLimitHeaders,
   });
-}
+});
