@@ -92,6 +92,31 @@ describe('payout automation', () => {
     );
   });
 
+  it('returns early when payout is already completed', async () => {
+    payoutQueryMocks.getPayoutDetail.mockResolvedValue({
+      id: 'payout-complete',
+      type: 'takealot_gift_card',
+      status: 'completed',
+      netCents: 5000,
+      payoutEmail: 'host@chipin.co.za',
+      recipientData: { email: 'host@chipin.co.za' },
+      childName: 'Maya',
+      giftData: null,
+      overflowGiftData: null,
+      externalRef: 'GC-999',
+    });
+
+    const { executeAutomatedPayout } = await loadModule();
+    const result = await executeAutomatedPayout({
+      payoutId: 'payout-complete',
+      actor: { type: 'admin' },
+    });
+
+    expect(result.status).toBe('completed');
+    expect(result.externalRef).toBe('GC-999');
+    expect(integrationMocks.issueTakealotGiftCard).not.toHaveBeenCalled();
+  });
+
   it('returns pending when Takealot provider is processing', async () => {
     process.env.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED = 'true';
     payoutQueryMocks.getPayoutDetail.mockResolvedValue({
@@ -147,6 +172,29 @@ describe('payout automation', () => {
     );
   });
 
+  it('uses fallback card number when encrypted value is missing', async () => {
+    process.env.KARRI_AUTOMATION_ENABLED = 'true';
+    payoutQueryMocks.getPayoutDetail.mockResolvedValue({
+      id: 'payout-2b',
+      type: 'karri_card_topup',
+      status: 'pending',
+      netCents: 6500,
+      payoutEmail: 'host@chipin.co.za',
+      recipientData: { cardNumber: '4111111111111111' },
+      childName: 'Maya',
+      overflowGiftData: null,
+    });
+    integrationMocks.topUpKarriCard.mockResolvedValue({
+      status: 'completed',
+      transactionId: 'K-456',
+    });
+
+    const { executeAutomatedPayout } = await loadModule();
+    await executeAutomatedPayout({ payoutId: 'payout-2b', actor: { type: 'admin' } });
+
+    expect(integrationMocks.topUpKarriCard).toHaveBeenCalled();
+  });
+
   it('executes GivenGain donation automation', async () => {
     process.env.GIVENGAIN_AUTOMATION_ENABLED = 'true';
     payoutQueryMocks.getPayoutDetail.mockResolvedValue({
@@ -195,6 +243,31 @@ describe('payout automation', () => {
 
     expect(result.status).toBe('pending');
     expect(result.externalRef).toBe('DG-456');
+  });
+
+  it('uses overflow gift data when causeId is missing from recipient data', async () => {
+    process.env.GIVENGAIN_AUTOMATION_ENABLED = 'true';
+    payoutQueryMocks.getPayoutDetail.mockResolvedValue({
+      id: 'payout-4b',
+      type: 'philanthropy_donation',
+      status: 'pending',
+      netCents: 4200,
+      payoutEmail: 'host@chipin.co.za',
+      recipientData: {},
+      childName: 'Maya',
+      overflowGiftData: { causeId: 'cause-2' },
+    });
+    integrationMocks.createGivenGainDonation.mockResolvedValue({
+      status: 'completed',
+      donationId: 'DG-789',
+    });
+
+    const { executeAutomatedPayout } = await loadModule();
+    await executeAutomatedPayout({ payoutId: 'payout-4b', actor: { type: 'admin' } });
+
+    expect(integrationMocks.createGivenGainDonation).toHaveBeenCalledWith(
+      expect.objectContaining({ causeId: 'cause-2' })
+    );
   });
 
   it('marks Karri payout as failed when provider fails', async () => {
