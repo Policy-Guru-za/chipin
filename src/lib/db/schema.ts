@@ -264,6 +264,31 @@ export const apiKeys = pgTable(
   })
 );
 
+export const webhookEndpoints = pgTable(
+  'webhook_endpoints',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    apiKeyId: uuid('api_key_id')
+      .notNull()
+      .references(() => apiKeys.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    events: text('events')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    secret: text('secret').notNull(),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    apiKeyIdx: index('idx_webhook_endpoints_api_key').on(table.apiKeyId),
+    activeIdx: index('idx_webhook_endpoints_active')
+      .on(table.isActive)
+      .where(sql`${table.isActive} = true`),
+  })
+);
+
 export const webhookEvents = pgTable(
   'webhook_events',
   {

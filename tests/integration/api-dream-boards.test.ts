@@ -5,31 +5,10 @@ const loadHandler = async () => {
   return import('@/app/api/v1/dream-boards/[id]/route');
 };
 
-const mockAuth = (result: { ok: boolean; error?: any; apiKey?: any }) => {
-  vi.doMock('@/lib/api/auth', () => ({
-    requireApiKey: vi.fn(async () => result),
+const mockAuth = (result: { ok: boolean; response?: Response; context?: any }) => {
+  vi.doMock('@/lib/api/handler', () => ({
+    enforceApiAuth: vi.fn(async () => result),
   }));
-};
-
-const mockRateLimit = (allowed: boolean) => {
-  const enforceApiRateLimit = vi.fn(async () => ({
-    allowed,
-    limit: 1000,
-    remaining: allowed ? 999 : 0,
-    reset: 1700000000,
-    retryAfterSeconds: allowed ? undefined : 120,
-  }));
-
-  vi.doMock('@/lib/api/rate-limit', async () => {
-    const actual =
-      await vi.importActual<typeof import('@/lib/api/rate-limit')>('@/lib/api/rate-limit');
-    return {
-      ...actual,
-      enforceApiRateLimit,
-    };
-  });
-
-  return enforceApiRateLimit;
 };
 
 const baseTakealotBoard = {
@@ -68,8 +47,7 @@ const buildTakealotBoard = (overrides: Partial<typeof baseTakealotBoard> = {}) =
 });
 
 afterEach(() => {
-  vi.unmock('@/lib/api/auth');
-  vi.unmock('@/lib/api/rate-limit');
+  vi.unmock('@/lib/api/handler');
   vi.unmock('@/lib/db/queries');
   vi.resetModules();
 });
@@ -78,9 +56,8 @@ describe('GET /api/v1/dream-boards/[id] auth', () => {
   it('returns unauthorized when auth fails', async () => {
     mockAuth({
       ok: false,
-      error: { code: 'unauthorized', message: 'Invalid or missing API key', status: 401 },
+      response: new Response(JSON.stringify({ error: { code: 'unauthorized' } }), { status: 401 }),
     });
-    const enforceApiRateLimit = mockRateLimit(true);
 
     const { GET } = await loadHandler();
     const response = await GET(new Request('http://localhost/api/v1/dream-boards/demo'), {
@@ -90,22 +67,13 @@ describe('GET /api/v1/dream-boards/[id] auth', () => {
 
     expect(response.status).toBe(401);
     expect(payload.error.code).toBe('unauthorized');
-    expect(response.headers.get('X-RateLimit-Limit')).toBe('1000');
-    expect(enforceApiRateLimit).toHaveBeenCalledWith(
-      expect.objectContaining({ keyId: 'anonymous:unauthorized:unknown' })
-    );
   });
 
   it('tracks forbidden requests separately', async () => {
     mockAuth({
       ok: false,
-      error: {
-        code: 'forbidden',
-        message: 'API key does not have the required scope',
-        status: 403,
-      },
+      response: new Response(JSON.stringify({ error: { code: 'forbidden' } }), { status: 403 }),
     });
-    const enforceApiRateLimit = mockRateLimit(true);
 
     const { GET } = await loadHandler();
     const response = await GET(new Request('http://localhost/api/v1/dream-boards/demo'), {
@@ -113,28 +81,6 @@ describe('GET /api/v1/dream-boards/[id] auth', () => {
     });
 
     expect(response.status).toBe(403);
-    expect(enforceApiRateLimit).toHaveBeenCalledWith(
-      expect.objectContaining({ keyId: 'anonymous:forbidden:unknown' })
-    );
-  });
-
-  it('returns rate limit when anonymous requests are throttled', async () => {
-    mockAuth({
-      ok: false,
-      error: { code: 'unauthorized', message: 'Invalid or missing API key', status: 401 },
-    });
-    mockRateLimit(false);
-
-    const { GET } = await loadHandler();
-    const response = await GET(new Request('http://localhost/api/v1/dream-boards/demo'), {
-      params: { id: 'demo' },
-    });
-    const payload = await response.json();
-
-    expect(response.status).toBe(429);
-    expect(payload.error.code).toBe('rate_limited');
-    expect(response.headers.get('Retry-After')).toBe('120');
-    expect(response.headers.get('X-RateLimit-Limit')).toBe('1000');
   });
 });
 
@@ -142,9 +88,12 @@ describe('GET /api/v1/dream-boards/[id] responses - missing', () => {
   it('returns not found when dream board is missing', async () => {
     mockAuth({
       ok: true,
-      apiKey: { id: 'api-key-1', rateLimit: 1000 },
+      context: {
+        requestId: 'req-1',
+        apiKey: { id: 'api-key-1', rateLimit: 1000 },
+        rateLimitHeaders: new Headers(),
+      },
     });
-    mockRateLimit(true);
 
     vi.doMock('@/lib/db/queries', () => ({
       getDreamBoardByPublicId: vi.fn(async () => null),
@@ -159,7 +108,6 @@ describe('GET /api/v1/dream-boards/[id] responses - missing', () => {
 
     expect(response.status).toBe(404);
     expect(payload.error.code).toBe('not_found');
-    expect(response.headers.get('X-RateLimit-Limit')).toBe('1000');
   });
 });
 
@@ -167,9 +115,12 @@ describe('GET /api/v1/dream-boards/[id] responses - validation', () => {
   it('returns validation error for invalid identifiers', async () => {
     mockAuth({
       ok: true,
-      apiKey: { id: 'api-key-1', rateLimit: 1000 },
+      context: {
+        requestId: 'req-2',
+        apiKey: { id: 'api-key-1', rateLimit: 1000 },
+        rateLimitHeaders: new Headers(),
+      },
     });
-    mockRateLimit(true);
 
     const getDreamBoardByPublicId = vi.fn(async () => null);
     vi.doMock('@/lib/db/queries', () => ({
@@ -193,9 +144,12 @@ describe('GET /api/v1/dream-boards/[id] responses - payloads', () => {
   it('returns a serialized dream board payload', async () => {
     mockAuth({
       ok: true,
-      apiKey: { id: 'api-key-2', rateLimit: 1000 },
+      context: {
+        requestId: 'req-123',
+        apiKey: { id: 'api-key-2', rateLimit: 1000 },
+        rateLimitHeaders: new Headers(),
+      },
     });
-    mockRateLimit(true);
 
     vi.doMock('@/lib/db/queries', () => ({
       getDreamBoardByPublicId: vi.fn(async () => buildTakealotBoard()),
@@ -221,9 +175,12 @@ describe('GET /api/v1/dream-boards/[id] responses - payloads', () => {
   it('returns takealot payloads when overflow data is missing', async () => {
     mockAuth({
       ok: true,
-      apiKey: { id: 'api-key-5', rateLimit: 1000 },
+      context: {
+        requestId: 'req-5',
+        apiKey: { id: 'api-key-5', rateLimit: 1000 },
+        rateLimitHeaders: new Headers(),
+      },
     });
-    mockRateLimit(true);
 
     vi.doMock('@/lib/db/queries', () => ({
       getDreamBoardByPublicId: vi.fn(async () =>
@@ -251,9 +208,12 @@ describe('GET /api/v1/dream-boards/[id] responses - payloads', () => {
   it('returns philanthropy gift data without extra fields', async () => {
     mockAuth({
       ok: true,
-      apiKey: { id: 'api-key-4', rateLimit: 1000 },
+      context: {
+        requestId: 'req-4',
+        apiKey: { id: 'api-key-4', rateLimit: 1000 },
+        rateLimitHeaders: new Headers(),
+      },
     });
-    mockRateLimit(true);
 
     vi.doMock('@/lib/db/queries', () => ({
       getDreamBoardByPublicId: vi.fn(async () => ({
@@ -304,10 +264,12 @@ describe('GET /api/v1/dream-boards/[id] responses - payloads', () => {
 describe('GET /api/v1/dream-boards/[id] rate limits', () => {
   it('returns a rate limit error when throttled', async () => {
     mockAuth({
-      ok: true,
-      apiKey: { id: 'api-key-3', rateLimit: 1000 },
+      ok: false,
+      response: new Response(JSON.stringify({ error: { code: 'rate_limited' } }), {
+        status: 429,
+        headers: new Headers({ 'Retry-After': '120' }),
+      }),
     });
-    mockRateLimit(false);
 
     vi.doMock('@/lib/db/queries', () => ({
       getDreamBoardByPublicId: vi.fn(async () => null),

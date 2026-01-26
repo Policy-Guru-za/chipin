@@ -5,6 +5,7 @@ export type ApiErrorCode =
   | 'forbidden'
   | 'not_found'
   | 'validation_error'
+  | 'conflict'
   | 'rate_limited'
   | 'internal_error';
 
@@ -53,4 +54,25 @@ export const jsonError = (params: {
       meta: buildApiMeta(params.requestId),
     },
     { status: params.status, headers: params.headers }
+  );
+
+/** Wrap a paginated success response with meta and pagination data. */
+export const jsonPaginated = <T>(params: {
+  data: T[];
+  pagination: {
+    has_more: boolean;
+    next_cursor: string | null;
+    total_count?: number;
+  };
+  requestId: string;
+  status?: number;
+  headers?: HeadersInit;
+}) =>
+  NextResponse.json(
+    {
+      data: params.data,
+      pagination: params.pagination,
+      meta: buildApiMeta(params.requestId),
+    },
+    { status: params.status ?? 200, headers: params.headers }
   );

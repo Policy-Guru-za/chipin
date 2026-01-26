@@ -235,6 +235,7 @@ export async function completePayout(params: {
   payoutId: string;
   externalRef: string;
   actor: AuditActor;
+  completedAt?: Date;
 }) {
   const [payout] = await db
     .select({
@@ -255,6 +256,8 @@ export async function completePayout(params: {
     return payout;
   }
 
+  const completedAt = params.completedAt ?? new Date();
+
   await db.transaction(async (tx) => {
     await tx
       .update(payouts)
@@ -262,7 +265,7 @@ export async function completePayout(params: {
         status: 'completed',
         externalRef: params.externalRef,
         errorMessage: null,
-        completedAt: new Date(),
+        completedAt,
       })
       .where(eq(payouts.id, payout.id));
 
