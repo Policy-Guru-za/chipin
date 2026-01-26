@@ -41,6 +41,18 @@ describe('parseTakealotHtml', () => {
     expect(result?.name).toBe('Toy');
     expect(result?.priceCents).toBe(59900);
   });
+
+  it('ignores invalid json-ld and falls back to og tags', () => {
+    const html = `
+      <script type="application/ld+json">{not json}</script>
+      <meta property="og:title" content="Blocks | Takealot.com" />
+      <meta property="og:image" content="https://img" />
+      <span>R 799.00</span>
+    `;
+    const result = parseTakealotHtml(html, 'https://www.takealot.com/item');
+    expect(result?.name).toBe('Blocks');
+    expect(result?.priceCents).toBe(79900);
+  });
 });
 
 describe('parseTakealotSearchHtml', () => {
@@ -57,5 +69,23 @@ describe('parseTakealotSearchHtml', () => {
     expect(results).toHaveLength(1);
     expect(results[0].name).toBe('Doll');
     expect(results[0].priceCents).toBe(39900);
+  });
+
+  it('dedupes and normalizes product urls', () => {
+    const html = `
+      <script type="application/ld+json">
+        [
+          {"@type":"ItemList","itemListElement":[
+            {"@type":"ListItem","item":{"@type":"Product","name":"Blocks","image":"https://img","offers":{"price":"499.00"},"url":"/blocks"}}
+          ]},
+          {"@type":"Product","name":"Blocks","image":"https://img","offers":{"price":"499.00"},"url":"https://www.takealot.com/blocks"}
+        ]
+      </script>
+    `;
+
+    const results = parseTakealotSearchHtml(html);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].url).toBe('https://www.takealot.com/blocks');
   });
 });

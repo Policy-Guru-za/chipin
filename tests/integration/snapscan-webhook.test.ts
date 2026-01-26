@@ -16,19 +16,19 @@ const mockRateLimit = (allowed: boolean) => {
   }));
 };
 
-describe('SnapScan webhook integration', () => {
-  const originalEnv = {
-    SNAPSCAN_WEBHOOK_AUTH_KEY: process.env.SNAPSCAN_WEBHOOK_AUTH_KEY,
-  };
+const originalEnv = {
+  SNAPSCAN_WEBHOOK_AUTH_KEY: process.env.SNAPSCAN_WEBHOOK_AUTH_KEY,
+};
 
-  afterEach(() => {
-    process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = originalEnv.SNAPSCAN_WEBHOOK_AUTH_KEY;
-    vi.unmock('@/lib/auth/rate-limit');
-    vi.unmock('@/lib/db/queries');
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+afterEach(() => {
+  process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = originalEnv.SNAPSCAN_WEBHOOK_AUTH_KEY;
+  vi.unmock('@/lib/auth/rate-limit');
+  vi.unmock('@/lib/db/queries');
+  vi.clearAllMocks();
+  vi.resetModules();
+});
 
+describe('SnapScan webhook integration - success', () => {
   it('accepts a valid webhook payload', async () => {
     process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = 'snap-secret';
     mockRateLimit(true);
@@ -85,7 +85,9 @@ describe('SnapScan webhook integration', () => {
     expect(updateContributionStatus).toHaveBeenCalledWith('contrib-1', 'completed');
     expect(markDreamBoardFundedIfNeeded).toHaveBeenCalledWith('board-1');
   });
+});
 
+describe('SnapScan webhook integration - errors', () => {
   it('rejects payloads without amounts', async () => {
     process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = 'snap-secret';
     mockRateLimit(true);

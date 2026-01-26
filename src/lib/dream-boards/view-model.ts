@@ -3,21 +3,11 @@ import type { getContributionByPaymentRef, getDreamBoardBySlug } from '@/lib/db/
 import { formatZar } from '@/lib/utils/money';
 
 import { getCauseById } from './causes';
+import { getGiftInfo } from './gift-info';
 import { getOverflowState } from './overflow';
 
 type DreamBoardRecord = NonNullable<Awaited<ReturnType<typeof getDreamBoardBySlug>>>;
 type ContributionRecord = Awaited<ReturnType<typeof getContributionByPaymentRef>>;
-
-type TakealotGiftData = {
-  productName: string;
-  productImage: string;
-};
-
-type PhilanthropyGiftData = {
-  causeName: string;
-  causeImage: string;
-  impactDescription: string;
-};
 
 export type OverflowGiftData = {
   causeId: string;
@@ -79,21 +69,6 @@ const getDaysLeftFrom = (deadline: Date, now: Date) => {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
-const getGiftInfo = (board: DreamBoardRecord, options: GuestViewModelOptions) => {
-  const takealotGift =
-    board.giftType === 'takealot_product' ? (board.giftData as TakealotGiftData) : null;
-  const philanthropyGift =
-    board.giftType === 'philanthropy' ? (board.giftData as PhilanthropyGiftData) : null;
-
-  return {
-    giftTitle: takealotGift?.productName ?? philanthropyGift?.causeName ?? '',
-    giftSubtitle: takealotGift
-      ? (options.takealotSubtitle ?? 'Dream gift')
-      : (philanthropyGift?.impactDescription ?? ''),
-    giftImage: takealotGift?.productImage ?? philanthropyGift?.causeImage ?? '',
-  };
-};
-
 const getOverflowInfo = (board: DreamBoardRecord) => {
   const overflowData = board.overflowGiftData as OverflowGiftData | null;
   const overflowCause = overflowData ? getCauseById(overflowData.causeId) : null;
@@ -141,17 +116,53 @@ const getOverflowNotice = (view: GuestViewModel) => {
   return `Contributions now support ${view.overflowData.causeName}: ${view.overflowData.impactDescription}.`;
 };
 
+const getContributorName = (contribution?: ContributionRecord | null) =>
+  contribution?.contributorName || 'Friend';
+
+const getContributionAmountLabel = (contribution?: ContributionRecord | null) =>
+  contribution?.amountCents ? formatZar(contribution.amountCents) : null;
+
+const getThankYouMessage = (params: {
+  board: DreamBoardRecord;
+  giftTitle: string;
+  giftSubtitle: string;
+  amountLabel: string | null;
+  isComplete: boolean;
+  overflowData: OverflowGiftData | null;
+  showCharityOverflow: boolean;
+}) => {
+  if (!params.amountLabel || !params.isComplete) {
+    return 'We’ll update this page once your payment is confirmed.';
+  }
+
+  if (params.showCharityOverflow && params.overflowData) {
+    const impact = params.overflowData.impactDescription
+      ? `: ${params.overflowData.impactDescription}`
+      : '';
+    return `Your ${params.amountLabel} contribution is supporting ${params.overflowData.causeName}${impact}.`;
+  }
+
+  if (params.board.giftType === 'philanthropy') {
+    const impact = params.giftSubtitle ? `: ${params.giftSubtitle}` : '';
+    const title = params.giftTitle || 'this cause';
+    return `Your ${params.amountLabel} contribution is supporting ${title}${impact}.`;
+  }
+
+  return `Your ${params.amountLabel} contribution is helping ${params.board.childName} get their dream gift.`;
+};
+
 const getThankYouCopy = (params: {
   board: DreamBoardRecord;
   contribution?: ContributionRecord | null;
 }) => {
-  const name = params.contribution?.contributorName || 'Friend';
-  const amount = params.contribution?.amountCents
-    ? formatZar(params.contribution.amountCents)
-    : null;
+  const name = getContributorName(params.contribution);
+  const amountLabel = getContributionAmountLabel(params.contribution);
   const isComplete = params.contribution?.paymentStatus === 'completed';
 
-  const { giftTitle, giftSubtitle } = getGiftInfo(params.board, {});
+  const { giftTitle, giftSubtitle } = getGiftInfo({
+    giftType: params.board.giftType,
+    giftData: params.board.giftData,
+  });
   const { overflowData } = getOverflowInfo(params.board);
   const { showCharityOverflow } = getOverflowState({
     raisedCents: params.board.raisedCents,
@@ -160,24 +171,15 @@ const getThankYouCopy = (params: {
     overflowGiftData: overflowData,
   });
 
-  const thankYouMessage = (() => {
-    if (!amount || !isComplete) {
-      return 'We’ll update this page once your payment is confirmed.';
-    }
-
-    if (showCharityOverflow && overflowData) {
-      const impact = overflowData.impactDescription ? `: ${overflowData.impactDescription}` : '';
-      return `Your ${amount} contribution is supporting ${overflowData.causeName}${impact}.`;
-    }
-
-    if (params.board.giftType === 'philanthropy') {
-      const impact = giftSubtitle ? `: ${giftSubtitle}` : '';
-      const title = giftTitle || 'this cause';
-      return `Your ${amount} contribution is supporting ${title}${impact}.`;
-    }
-
-    return `Your ${amount} contribution is helping ${params.board.childName} get their dream gift.`;
-  })();
+  const thankYouMessage = getThankYouMessage({
+    board: params.board,
+    giftTitle,
+    giftSubtitle,
+    amountLabel,
+    isComplete,
+    overflowData,
+    showCharityOverflow,
+  });
 
   return {
     headline: isComplete ? `Thank you, ${name}!` : 'Thanks for your support!',
@@ -190,7 +192,11 @@ export const buildGuestViewModel = (
   options: GuestViewModelOptions = {}
 ): GuestViewModel => {
   const now = options.now ?? new Date();
-  const { giftTitle, giftSubtitle, giftImage } = getGiftInfo(board, options);
+  const { giftTitle, giftSubtitle, giftImage } = getGiftInfo({
+    giftType: board.giftType,
+    giftData: board.giftData,
+    takealotSubtitle: options.takealotSubtitle,
+  });
   const { overflowData, overflowTitle, overflowSubtitle, overflowImage } = getOverflowInfo(board);
 
   const { funded, showCharityOverflow } = getOverflowState({

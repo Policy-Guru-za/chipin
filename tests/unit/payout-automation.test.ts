@@ -45,26 +45,26 @@ const loadModule = async () => {
   return import('@/lib/payouts/automation');
 };
 
-describe('payout automation', () => {
-  const originalEnv = {
-    TAKEALOT_GIFTCARD_AUTOMATION_ENABLED: process.env.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED,
-    KARRI_AUTOMATION_ENABLED: process.env.KARRI_AUTOMATION_ENABLED,
-    GIVENGAIN_AUTOMATION_ENABLED: process.env.GIVENGAIN_AUTOMATION_ENABLED,
-  };
+const originalEnv = {
+  TAKEALOT_GIFTCARD_AUTOMATION_ENABLED: process.env.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED,
+  KARRI_AUTOMATION_ENABLED: process.env.KARRI_AUTOMATION_ENABLED,
+  GIVENGAIN_AUTOMATION_ENABLED: process.env.GIVENGAIN_AUTOMATION_ENABLED,
+};
 
-  beforeEach(() => {
-    const updateChain = { set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) };
-    dbMock.update.mockReturnValue(updateChain);
-  });
+beforeEach(() => {
+  const updateChain = { set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) };
+  dbMock.update.mockReturnValue(updateChain);
+});
 
-  afterEach(() => {
-    process.env.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED =
-      originalEnv.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED;
-    process.env.KARRI_AUTOMATION_ENABLED = originalEnv.KARRI_AUTOMATION_ENABLED;
-    process.env.GIVENGAIN_AUTOMATION_ENABLED = originalEnv.GIVENGAIN_AUTOMATION_ENABLED;
-    vi.clearAllMocks();
-  });
+afterEach(() => {
+  process.env.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED =
+    originalEnv.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED;
+  process.env.KARRI_AUTOMATION_ENABLED = originalEnv.KARRI_AUTOMATION_ENABLED;
+  process.env.GIVENGAIN_AUTOMATION_ENABLED = originalEnv.GIVENGAIN_AUTOMATION_ENABLED;
+  vi.clearAllMocks();
+});
 
+describe('payout automation - takealot', () => {
   it('executes Takealot gift card automation', async () => {
     process.env.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED = 'true';
     payoutQueryMocks.getPayoutDetail.mockResolvedValue({
@@ -145,7 +145,9 @@ describe('payout automation', () => {
     expect(result.externalRef).toBe('ORDER-1');
     expect(payoutServiceMocks.completePayout).not.toHaveBeenCalled();
   });
+});
 
+describe('payout automation - karri', () => {
   it('executes Karri top-up automation', async () => {
     process.env.KARRI_AUTOMATION_ENABLED = 'true';
     payoutQueryMocks.getPayoutDetail.mockResolvedValue({
@@ -195,6 +197,35 @@ describe('payout automation', () => {
     expect(integrationMocks.topUpKarriCard).toHaveBeenCalled();
   });
 
+  it('marks Karri payout as failed when provider fails', async () => {
+    process.env.KARRI_AUTOMATION_ENABLED = 'true';
+    payoutQueryMocks.getPayoutDetail.mockResolvedValue({
+      id: 'payout-5',
+      type: 'karri_card_topup',
+      status: 'pending',
+      netCents: 6500,
+      payoutEmail: 'host@chipin.co.za',
+      recipientData: { cardNumberEncrypted: 'encrypted' },
+      childName: 'Maya',
+      overflowGiftData: null,
+    });
+    integrationMocks.topUpKarriCard.mockResolvedValue({
+      status: 'failed',
+      transactionId: 'K-FAIL',
+      errorMessage: 'Card declined',
+    });
+
+    const { executeAutomatedPayout } = await loadModule();
+    const result = await executeAutomatedPayout({ payoutId: 'payout-5', actor: { type: 'admin' } });
+
+    expect(result.status).toBe('failed');
+    expect(payoutServiceMocks.failPayout).toHaveBeenCalledWith(
+      expect.objectContaining({ payoutId: 'payout-5', errorMessage: 'Card declined' })
+    );
+  });
+});
+
+describe('payout automation - philanthropy', () => {
   it('executes GivenGain donation automation', async () => {
     process.env.GIVENGAIN_AUTOMATION_ENABLED = 'true';
     payoutQueryMocks.getPayoutDetail.mockResolvedValue({
@@ -269,34 +300,9 @@ describe('payout automation', () => {
       expect.objectContaining({ causeId: 'cause-2' })
     );
   });
+});
 
-  it('marks Karri payout as failed when provider fails', async () => {
-    process.env.KARRI_AUTOMATION_ENABLED = 'true';
-    payoutQueryMocks.getPayoutDetail.mockResolvedValue({
-      id: 'payout-5',
-      type: 'karri_card_topup',
-      status: 'pending',
-      netCents: 6500,
-      payoutEmail: 'host@chipin.co.za',
-      recipientData: { cardNumberEncrypted: 'encrypted' },
-      childName: 'Maya',
-      overflowGiftData: null,
-    });
-    integrationMocks.topUpKarriCard.mockResolvedValue({
-      status: 'failed',
-      transactionId: 'K-FAIL',
-      errorMessage: 'Card declined',
-    });
-
-    const { executeAutomatedPayout } = await loadModule();
-    const result = await executeAutomatedPayout({ payoutId: 'payout-5', actor: { type: 'admin' } });
-
-    expect(result.status).toBe('failed');
-    expect(payoutServiceMocks.failPayout).toHaveBeenCalledWith(
-      expect.objectContaining({ payoutId: 'payout-5', errorMessage: 'Card declined' })
-    );
-  });
-
+describe('payout automation - errors', () => {
   it('throws when automation is disabled', async () => {
     process.env.TAKEALOT_GIFTCARD_AUTOMATION_ENABLED = 'false';
     payoutQueryMocks.getPayoutDetail.mockResolvedValue({

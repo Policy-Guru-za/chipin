@@ -18,28 +18,36 @@ const requestSchema = z.object({
   paymentProvider: z.enum(['payfast', 'ozow', 'snapscan']),
 });
 
+type PaymentProvider = z.infer<typeof requestSchema>['paymentProvider'];
+
 const getClientIp = (request: NextRequest) =>
   request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
 
-export async function POST(request: NextRequest) {
+const parseRequest = async (request: NextRequest) => {
   const body = await request.json().catch(() => null);
   const parsed = requestSchema.safeParse(body);
-
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+    return { response: NextResponse.json({ error: 'invalid_request' }, { status: 400 }) };
   }
+  return { data: parsed.data };
+};
 
-  const ip = getClientIp(request);
-  const rateLimitKey = `contribution:create:${ip ?? 'unknown'}:${parsed.data.dreamBoardId}`;
+const enforceContributionRateLimit = async (
+  ip: string | null | undefined,
+  dreamBoardId: string
+) => {
+  const rateLimitKey = `contribution:create:${ip ?? 'unknown'}:${dreamBoardId}`;
   const rateLimit = await enforceRateLimit(rateLimitKey, { limit: 10, windowSeconds: 60 * 60 });
-
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds },
       { status: 429 }
     );
   }
+  return null;
+};
 
+const fetchDreamBoard = async (dreamBoardId: string) => {
   const [board] = await db
     .select({
       id: dreamBoards.id,
@@ -48,50 +56,94 @@ export async function POST(request: NextRequest) {
       status: dreamBoards.status,
     })
     .from(dreamBoards)
-    .where(eq(dreamBoards.id, parsed.data.dreamBoardId))
+    .where(eq(dreamBoards.id, dreamBoardId))
     .limit(1);
+  return board ?? null;
+};
 
+const validateDreamBoard = (board: Awaited<ReturnType<typeof fetchDreamBoard>>) => {
   if (!board) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
-
   if (board.status !== 'active' && board.status !== 'funded') {
     return NextResponse.json({ error: 'board_closed' }, { status: 400 });
   }
+  return null;
+};
 
-  if (!isPaymentProviderAvailable(parsed.data.paymentProvider)) {
+const validatePaymentProvider = (provider: PaymentProvider) => {
+  if (!isPaymentProviderAvailable(provider)) {
     return NextResponse.json({ error: 'provider_unavailable' }, { status: 400 });
   }
+  return null;
+};
 
-  try {
-    const contributionCents = parsed.data.contributionCents;
-    const totalCents = calculateTotalWithFee(contributionCents);
-    const feeCents = totalCents - contributionCents;
-    const paymentRef = generatePaymentRef();
-    const userAgent = request.headers.get('user-agent') ?? undefined;
+const buildContributionPayload = (params: {
+  board: NonNullable<Awaited<ReturnType<typeof fetchDreamBoard>>>;
+  data: z.infer<typeof requestSchema>;
+  ip: string | null | undefined;
+  request: NextRequest;
+}) => {
+  const contributionCents = params.data.contributionCents;
+  const totalCents = calculateTotalWithFee(contributionCents);
+  const feeCents = totalCents - contributionCents;
+  const paymentRef = generatePaymentRef();
+  const userAgent = params.request.headers.get('user-agent') ?? undefined;
+  const contributorName = params.data.contributorName?.trim() || undefined;
+  const message = params.data.message?.trim() || undefined;
 
-    const contributorName = parsed.data.contributorName?.trim() || undefined;
-    const message = parsed.data.message?.trim() || undefined;
-
-    await db.insert(contributions).values({
-      dreamBoardId: board.id,
+  return {
+    contribution: {
+      dreamBoardId: params.board.id,
       contributorName,
       message,
       amountCents: contributionCents,
       feeCents,
-      paymentProvider: parsed.data.paymentProvider,
+      paymentProvider: params.data.paymentProvider,
       paymentRef,
-      paymentStatus: 'pending',
-      ipAddress: ip ?? undefined,
+      paymentStatus: 'pending' as const,
+      ipAddress: params.ip ?? undefined,
       userAgent,
+    },
+    payment: {
+      totalCents,
+      paymentRef,
+    },
+  };
+};
+
+export async function POST(request: NextRequest) {
+  const parsed = await parseRequest(request);
+  if ('response' in parsed) {
+    return parsed.response;
+  }
+
+  const ip = getClientIp(request);
+  const rateLimitResponse = await enforceContributionRateLimit(ip, parsed.data.dreamBoardId);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const board = await fetchDreamBoard(parsed.data.dreamBoardId);
+  const boardResponse = validateDreamBoard(board);
+  if (boardResponse) return boardResponse;
+
+  const providerResponse = validatePaymentProvider(parsed.data.paymentProvider);
+  if (providerResponse) return providerResponse;
+
+  try {
+    const payload = buildContributionPayload({
+      board,
+      data: parsed.data,
+      ip,
+      request,
     });
+    await db.insert(contributions).values(payload.contribution);
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
     const payment = await createPaymentIntent(parsed.data.paymentProvider, {
-      amountCents: totalCents,
-      reference: paymentRef,
+      amountCents: payload.payment.totalCents,
+      reference: payload.payment.paymentRef,
       description: `Contribution to ${board.childName}'s Dream Board`,
-      returnUrl: `${baseUrl}/${board.slug}/thanks?ref=${paymentRef}&provider=${parsed.data.paymentProvider}`,
+      returnUrl: `${baseUrl}/${board.slug}/thanks?ref=${payload.payment.paymentRef}&provider=${parsed.data.paymentProvider}`,
       cancelUrl: `${baseUrl}/${board.slug}?cancelled=1&provider=${parsed.data.paymentProvider}`,
       notifyUrl: `${baseUrl}/api/webhooks/${parsed.data.paymentProvider}`,
       expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),

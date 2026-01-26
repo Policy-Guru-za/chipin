@@ -25,53 +25,73 @@ const parsePriceCents = (price: string | number | undefined) => {
   return Math.round(value * 100);
 };
 
-const extractProduct = (item: any, fallbackUrl?: string): TakealotProduct | null => {
-  const priceCents = parsePriceCents(item?.offers?.price ?? item?.offers?.lowPrice);
-  const image = Array.isArray(item?.image) ? item.image[0] : item?.image;
-  let url = item?.url ?? fallbackUrl;
+const safeJsonParse = (value: string) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const extractJsonLdItems = (html: string) => {
+  const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  const items: unknown[] = [];
+
+  scripts.forEach((match) => {
+    const parsed = safeJsonParse(match[1]);
+    if (!parsed) return;
+    if (Array.isArray(parsed)) {
+      items.push(...parsed);
+    } else {
+      items.push(parsed);
+    }
+  });
+
+  return items;
+};
+
+const normalizeTakealotUrl = (value: unknown, fallbackUrl?: string) => {
+  let url = value ?? fallbackUrl;
   if (typeof url === 'string' && url.startsWith('/')) {
     url = `https://www.takealot.com${url}`;
   }
   if (typeof url !== 'string' || !isTakealotUrl(url)) {
     return null;
   }
-  if (!item?.name || !priceCents || !image) {
+  return url;
+};
+
+const getImageUrl = (item: any) => (Array.isArray(item?.image) ? item.image[0] : item?.image);
+
+const getProductName = (item: any) => (typeof item?.name === 'string' ? item.name : null);
+
+const getProductPriceCents = (item: any) =>
+  parsePriceCents(item?.offers?.price ?? item?.offers?.lowPrice);
+
+const extractProduct = (item: any, fallbackUrl?: string): TakealotProduct | null => {
+  const priceCents = getProductPriceCents(item);
+  const image = getImageUrl(item);
+  const url = normalizeTakealotUrl(item?.url, fallbackUrl);
+  const name = getProductName(item);
+  if (!url || !name || !priceCents || !image) {
     return null;
   }
 
-  return {
-    url,
-    name: item.name,
-    priceCents,
-    imageUrl: image,
-  };
+  return { url, name, priceCents, imageUrl: image };
 };
 
-export const parseTakealotHtml = (html: string, url: string): TakealotProduct | null => {
-  const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
-  for (const match of scripts) {
-    try {
-      const json = JSON.parse(match[1]);
-      const items = Array.isArray(json) ? json : [json];
-      for (const item of items) {
-        if (item?.['@type'] === 'Product') {
-          const priceCents = parsePriceCents(item?.offers?.price);
-          const image = Array.isArray(item?.image) ? item.image[0] : item?.image;
-          if (item?.name && priceCents && image) {
-            return {
-              url,
-              name: item.name,
-              priceCents,
-              imageUrl: image,
-            };
-          }
-        }
-      }
-    } catch {
-      continue;
-    }
+const extractProductFromJsonLd = (item: any, url: string) => {
+  if (item?.['@type'] !== 'Product') return null;
+  const priceCents = parsePriceCents(item?.offers?.price);
+  const image = getImageUrl(item);
+  const name = getProductName(item);
+  if (name && priceCents && image) {
+    return { url, name, priceCents, imageUrl: image };
   }
+  return null;
+};
 
+const parseOpenGraphProduct = (html: string, url: string) => {
   const ogTitle = html.match(/<meta property="og:title" content="([^"]+)"/i)?.[1];
   const ogImage = html.match(/<meta property="og:image" content="([^"]+)"/i)?.[1];
   const priceMatch = html.match(/R\s*([\d,]+(?:\.\d{2})?)/);
@@ -89,40 +109,54 @@ export const parseTakealotHtml = (html: string, url: string): TakealotProduct | 
   };
 };
 
-export const parseTakealotSearchHtml = (html: string): TakealotSearchResult[] => {
-  const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+export const parseTakealotHtml = (html: string, url: string): TakealotProduct | null => {
+  const items = extractJsonLdItems(html);
+  for (const item of items) {
+    const product = extractProductFromJsonLd(item, url);
+    if (product) return product;
+  }
+
+  return parseOpenGraphProduct(html, url);
+};
+
+const appendUniqueProduct = (
+  product: TakealotProduct | null,
+  results: TakealotSearchResult[],
+  seen: Set<string>
+) => {
+  if (product && !seen.has(product.url)) {
+    seen.add(product.url);
+    results.push(product);
+  }
+};
+
+const collectItemListProducts = (item: any, results: TakealotSearchResult[], seen: Set<string>) => {
+  const list = Array.isArray(item?.itemListElement) ? item.itemListElement : [];
+  list.forEach((entry: any) => {
+    const product = extractProduct(entry?.item ?? entry, entry?.item?.url ?? entry?.url);
+    appendUniqueProduct(product, results, seen);
+  });
+};
+
+const collectProductsFromJsonLd = (items: unknown[]) => {
   const results: TakealotSearchResult[] = [];
   const seen = new Set<string>();
 
-  for (const match of scripts) {
-    try {
-      const json = JSON.parse(match[1]);
-      const items = Array.isArray(json) ? json : [json];
-      for (const item of items) {
-        if (item?.['@type'] === 'ItemList') {
-          const list = item?.itemListElement ?? [];
-          for (const entry of list) {
-            const product = extractProduct(entry?.item ?? entry, entry?.item?.url ?? entry?.url);
-            if (product && !seen.has(product.url)) {
-              seen.add(product.url);
-              results.push(product);
-            }
-          }
-        }
-        if (item?.['@type'] === 'Product') {
-          const product = extractProduct(item, item?.url);
-          if (product && !seen.has(product.url)) {
-            seen.add(product.url);
-            results.push(product);
-          }
-        }
-      }
-    } catch {
-      continue;
+  items.forEach((item: any) => {
+    if (item?.['@type'] === 'ItemList') {
+      collectItemListProducts(item, results, seen);
     }
-  }
+    if (item?.['@type'] === 'Product') {
+      appendUniqueProduct(extractProduct(item, item?.url), results, seen);
+    }
+  });
 
   return results;
+};
+
+export const parseTakealotSearchHtml = (html: string): TakealotSearchResult[] => {
+  const items = extractJsonLdItems(html);
+  return collectProductsFromJsonLd(items);
 };
 
 export async function fetchTakealotSearch(

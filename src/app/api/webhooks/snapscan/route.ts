@@ -16,37 +16,53 @@ import {
 } from '@/lib/db/queries';
 import { log } from '@/lib/observability/logger';
 
+type WebhookContext = {
+  requestId?: string;
+  ip?: string | null;
+};
+
 const getClientIp = (request: NextRequest) =>
   request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
 
-export async function POST(request: NextRequest) {
-  const rawBody = await request.text();
-  const requestId = request.headers.get('x-request-id') ?? undefined;
-  const ip = getClientIp(request);
+const getWebhookContext = (request: NextRequest): WebhookContext => ({
+  requestId: request.headers.get('x-request-id') ?? undefined,
+  ip: getClientIp(request),
+});
 
-  const rateLimit = await enforceRateLimit(`webhook:snapscan:${ip ?? 'unknown'}`, {
+const rateLimitWebhook = async (context: WebhookContext) => {
+  const rateLimit = await enforceRateLimit(`webhook:snapscan:${context.ip ?? 'unknown'}`, {
     limit: 120,
     windowSeconds: 60,
   });
 
   if (!rateLimit.allowed) {
-    log('warn', 'payments.snapscan_rate_limited', { ip }, requestId);
+    log('warn', 'payments.snapscan_rate_limited', { ip: context.ip }, context.requestId);
     return NextResponse.json(
       { error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds },
       { status: 429 }
     );
   }
 
-  if (!verifySnapScanSignature(rawBody, request.headers.get('authorization'))) {
-    log('warn', 'payments.snapscan_invalid_signature', undefined, requestId);
+  return null;
+};
+
+const validateSignature = (rawBody: string, authHeader: string | null, context: WebhookContext) => {
+  if (!verifySnapScanSignature(rawBody, authHeader)) {
+    log('warn', 'payments.snapscan_invalid_signature', undefined, context.requestId);
     return NextResponse.json({ error: 'invalid_signature' }, { status: 400 });
   }
+  return null;
+};
 
+const validatePayload = (rawBody: string) => {
   const { payload } = parseSnapScanPayload(rawBody);
   if (!payload) {
-    return NextResponse.json({ error: 'invalid_payload' }, { status: 400 });
+    return { response: NextResponse.json({ error: 'invalid_payload' }, { status: 400 }) };
   }
+  return { payload };
+};
 
+const validateTimestamp = (payload: Record<string, unknown>, context: WebhookContext) => {
   const timestampValue = extractTimestampValue(payload, [
     'timestamp',
     'payment_date',
@@ -63,20 +79,23 @@ export async function POST(request: NextRequest) {
         'warn',
         'payments.snapscan_invalid_timestamp',
         { reason: timestampResult.reason },
-        requestId
+        context.requestId
       );
       return NextResponse.json({ error: 'invalid_timestamp' }, { status: 400 });
     }
-  } else {
-    log('warn', 'payments.snapscan_timestamp_missing', undefined, requestId);
+    return null;
   }
 
-  const paymentRef = extractSnapScanReference(payload);
-  if (!paymentRef) {
-    return NextResponse.json({ error: 'missing_reference' }, { status: 400 });
-  }
+  log('warn', 'payments.snapscan_timestamp_missing', undefined, context.requestId);
+  return null;
+};
 
-  const contribution = await getContributionByPaymentRef('snapscan', paymentRef);
+const validateContributionAmount = (
+  paymentRef: string,
+  payload: Record<string, unknown>,
+  contribution: Awaited<ReturnType<typeof getContributionByPaymentRef>>,
+  context: WebhookContext
+) => {
   if (!contribution) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
@@ -88,16 +107,53 @@ export async function POST(request: NextRequest) {
   const amountCents = parseSnapScanAmountCents(payload);
   const expectedTotal = contribution.amountCents + contribution.feeCents;
   if (amountCents === null) {
-    log('warn', 'payments.snapscan_amount_missing', { paymentRef }, requestId);
+    log('warn', 'payments.snapscan_amount_missing', { paymentRef }, context.requestId);
     return NextResponse.json({ error: 'amount_missing' }, { status: 400 });
-  } else if (amountCents !== expectedTotal) {
+  }
+  if (amountCents !== expectedTotal) {
     log(
       'warn',
       'payments.snapscan_amount_mismatch',
       { expected: expectedTotal, received: amountCents, paymentRef },
-      requestId
+      context.requestId
     );
     return NextResponse.json({ error: 'amount_mismatch' }, { status: 400 });
+  }
+
+  return null;
+};
+
+export async function POST(request: NextRequest) {
+  const rawBody = await request.text();
+  const context = getWebhookContext(request);
+
+  const rateLimitResponse = await rateLimitWebhook(context);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const signatureResponse = validateSignature(
+    rawBody,
+    request.headers.get('authorization'),
+    context
+  );
+  if (signatureResponse) return signatureResponse;
+
+  const payloadResult = validatePayload(rawBody);
+  if ('response' in payloadResult) return payloadResult.response;
+  const { payload } = payloadResult;
+
+  const timestampResponse = validateTimestamp(payload, context);
+  if (timestampResponse) return timestampResponse;
+
+  const paymentRef = extractSnapScanReference(payload);
+  if (!paymentRef) {
+    return NextResponse.json({ error: 'missing_reference' }, { status: 400 });
+  }
+
+  const contribution = await getContributionByPaymentRef('snapscan', paymentRef);
+  const amountResponse = validateContributionAmount(paymentRef, payload, contribution, context);
+  if (amountResponse) return amountResponse;
+  if (!contribution) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
 
   const status = mapSnapScanStatus(payload);

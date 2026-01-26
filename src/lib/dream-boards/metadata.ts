@@ -1,17 +1,7 @@
 import type { Metadata } from 'next';
 
 import { getCauseById } from './causes';
-
-type TakealotGiftData = {
-  productName: string;
-  productImage: string;
-};
-
-type PhilanthropyGiftData = {
-  causeName: string;
-  causeImage: string;
-  impactDescription: string;
-};
+import { getGiftInfo } from './gift-info';
 
 type OverflowGiftData = {
   causeId: string;
@@ -43,39 +33,6 @@ const toAbsoluteUrl = (url: string, baseUrl: string) => {
   }
 };
 
-const getGiftTitle = (
-  takealotGift: TakealotGiftData | null,
-  philanthropyGift: PhilanthropyGiftData | null
-) => {
-  if (takealotGift?.productName) {
-    return takealotGift.productName;
-  }
-
-  return philanthropyGift?.causeName ?? '';
-};
-
-const getGiftSubtitle = (
-  takealotGift: TakealotGiftData | null,
-  philanthropyGift: PhilanthropyGiftData | null
-) => {
-  if (takealotGift) {
-    return 'Dream gift';
-  }
-
-  return philanthropyGift?.impactDescription ?? '';
-};
-
-const getGiftImage = (
-  takealotGift: TakealotGiftData | null,
-  philanthropyGift: PhilanthropyGiftData | null
-) => {
-  if (takealotGift?.productImage) {
-    return takealotGift.productImage;
-  }
-
-  return philanthropyGift?.causeImage ?? '';
-};
-
 const getMetadataDescription = (
   board: DreamBoardMetadataSource,
   showCharityOverflow: boolean,
@@ -93,17 +50,7 @@ const getMetadataDescription = (
   return `Support ${giftTitle} for ${board.childName}.`;
 };
 
-export const buildDreamBoardMetadata = (
-  board: DreamBoardMetadataSource,
-  options: MetadataOptions
-): Metadata => {
-  const takealotGift =
-    board.giftType === 'takealot_product' ? (board.giftData as TakealotGiftData) : null;
-  const philanthropyGift =
-    board.giftType === 'philanthropy' ? (board.giftData as PhilanthropyGiftData) : null;
-  const giftTitle = getGiftTitle(takealotGift, philanthropyGift);
-  const giftSubtitle = getGiftSubtitle(takealotGift, philanthropyGift);
-  const giftImage = getGiftImage(takealotGift, philanthropyGift);
+const getOverflowInfo = (board: DreamBoardMetadataSource) => {
   const overflowData = board.overflowGiftData as OverflowGiftData | null;
   const funded = board.raisedCents >= board.goalCents;
   const showCharityOverflow =
@@ -111,13 +58,56 @@ export const buildDreamBoardMetadata = (
   const overflowCause = overflowData ? getCauseById(overflowData.causeId) : null;
   const overflowImage = overflowCause?.imageUrl ?? board.childPhotoUrl;
 
+  return {
+    overflowData,
+    showCharityOverflow,
+    overflowImage,
+  };
+};
+
+const getMetadataImage = (params: {
+  showCharityOverflow: boolean;
+  overflowImage: string;
+  giftImage: string;
+  fallbackImage: string;
+}) =>
+  params.showCharityOverflow ? params.overflowImage : params.giftImage || params.fallbackImage;
+
+const getAltText = (params: {
+  showCharityOverflow: boolean;
+  overflowData: OverflowGiftData | null;
+  giftSubtitle: string;
+  title: string;
+}) =>
+  params.showCharityOverflow
+    ? (params.overflowData?.impactDescription ?? params.overflowData?.causeName ?? params.title)
+    : params.giftSubtitle || params.title;
+
+export const buildDreamBoardMetadata = (
+  board: DreamBoardMetadataSource,
+  options: MetadataOptions
+): Metadata => {
+  const { giftTitle, giftSubtitle, giftImage } = getGiftInfo({
+    giftType: board.giftType,
+    giftData: board.giftData,
+  });
+  const { overflowData, showCharityOverflow, overflowImage } = getOverflowInfo(board);
+
   const title = `${board.childName}'s Dream Board | ChipIn`;
   const description = getMetadataDescription(board, showCharityOverflow, giftTitle, overflowData);
-  const imageCandidate = showCharityOverflow ? overflowImage : giftImage || board.childPhotoUrl;
+  const imageCandidate = getMetadataImage({
+    showCharityOverflow,
+    overflowImage,
+    giftImage,
+    fallbackImage: board.childPhotoUrl,
+  });
   const imageUrl = imageCandidate ? toAbsoluteUrl(imageCandidate, options.baseUrl) : undefined;
-  const altText = showCharityOverflow
-    ? (overflowData?.impactDescription ?? overflowData?.causeName ?? title)
-    : giftSubtitle || title;
+  const altText = getAltText({
+    showCharityOverflow,
+    overflowData,
+    giftSubtitle,
+    title,
+  });
   const urlPath = options.path ?? `/${board.slug}`;
   const url = toAbsoluteUrl(urlPath, options.baseUrl);
 

@@ -78,6 +78,22 @@ type ChildSearchParams = {
   error?: string;
 };
 
+const childErrorMessages: Record<string, string> = {
+  invalid: 'Please complete all required fields.',
+  date_range: 'Choose a birthday within the next 90 days.',
+  invalid_type: 'Photos must be JPG, PNG, or WebP.',
+  file_too_large: 'Photo must be under 5MB.',
+  upload_failed: 'Upload failed. Please try again.',
+};
+
+const getChildErrorMessage = (error?: string) => {
+  if (!error) return null;
+  if (error === 'photo' || error === 'empty_file') {
+    return 'Please upload a photo of your child.';
+  }
+  return childErrorMessages[error] ?? null;
+};
+
 export default async function CreateChildPage({
   searchParams,
 }: {
@@ -86,6 +102,7 @@ export default async function CreateChildPage({
   const session = await requireSession();
   const draft = await getDreamBoardDraft(session.hostId);
   const error = searchParams?.error;
+  const errorMessage = getChildErrorMessage(error);
   const view = buildCreateFlowViewModel({ step: 'child', draft });
 
   return (
@@ -96,34 +113,9 @@ export default async function CreateChildPage({
           <CardDescription>Tell us who we’re celebrating and add a photo.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {error === 'invalid' ? (
+          {errorMessage ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Please complete all required fields.
-            </div>
-          ) : null}
-          {error === 'date_range' ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Choose a birthday within the next 90 days.
-            </div>
-          ) : null}
-          {error === 'photo' || error === 'empty_file' ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Please upload a photo of your child.
-            </div>
-          ) : null}
-          {error === 'invalid_type' ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Photos must be JPG, PNG, or WebP.
-            </div>
-          ) : null}
-          {error === 'file_too_large' ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Photo must be under 5MB.
-            </div>
-          ) : null}
-          {error === 'upload_failed' ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Upload failed. Please try again.
+              {errorMessage}
             </div>
           ) : null}
 

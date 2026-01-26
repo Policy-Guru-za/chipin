@@ -47,4 +47,16 @@ describe('SnapScan parsing helpers', () => {
     expect(mapSnapScanPaymentStatus('error')).toBe('failed');
     expect(mapSnapScanPaymentStatus('pending')).toBe('processing');
   });
+
+  it('handles numeric and invalid amounts', () => {
+    expect(parseSnapScanAmountCents({ amount: 2500 })).toBe(2500);
+    expect(parseSnapScanAmountCents({ amount: 25.5 })).toBe(2550);
+    expect(parseSnapScanAmountCents({ amount: '100' })).toBe(100);
+    expect(parseSnapScanAmountCents({ amount: 'oops' })).toBeNull();
+  });
+
+  it('extracts payments from arrays and empty payloads', () => {
+    expect(extractSnapScanPayments([{ id: 1 }])).toHaveLength(1);
+    expect(extractSnapScanPayments({})).toHaveLength(0);
+  });
 });

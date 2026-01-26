@@ -89,6 +89,192 @@ const markProcessing = async (payout: PayoutRecord) => {
     .where(eq(payouts.id, payout.id));
 };
 
+const recordAutomationEvent = async (params: {
+  actor: AuditActor;
+  action: string;
+  payoutId: string;
+  metadata?: Record<string, unknown>;
+}) =>
+  recordAuditEvent({
+    actor: params.actor,
+    action: params.action,
+    target: { type: 'payout', id: params.payoutId },
+    metadata: params.metadata,
+  });
+
+const markPendingPayout = async (params: {
+  payout: PayoutRecord;
+  externalRef: string;
+  actor: AuditActor;
+  metadata?: Record<string, unknown>;
+}) => {
+  await db
+    .update(payouts)
+    .set({ status: 'processing', externalRef: params.externalRef })
+    .where(eq(payouts.id, params.payout.id));
+  await recordAutomationEvent({
+    actor: params.actor,
+    action: 'payout.automation.pending',
+    payoutId: params.payout.id,
+    metadata: { externalRef: params.externalRef, ...params.metadata },
+  });
+};
+
+const markCompletedPayout = async (params: {
+  payout: PayoutRecord;
+  externalRef: string;
+  actor: AuditActor;
+  metadata?: Record<string, unknown>;
+}) => {
+  await completePayout({
+    payoutId: params.payout.id,
+    externalRef: params.externalRef,
+    actor: params.actor,
+  });
+  await recordAutomationEvent({
+    actor: params.actor,
+    action: 'payout.automation.completed',
+    payoutId: params.payout.id,
+    metadata: { externalRef: params.externalRef, ...params.metadata },
+  });
+};
+
+const markFailedPayout = async (params: {
+  payout: PayoutRecord;
+  errorMessage: string;
+  actor: AuditActor;
+}) => {
+  await failPayout({
+    payoutId: params.payout.id,
+    errorMessage: params.errorMessage,
+    actor: params.actor,
+  });
+  await recordAutomationEvent({
+    actor: params.actor,
+    action: 'payout.automation.failed',
+    payoutId: params.payout.id,
+    metadata: { reason: params.errorMessage },
+  });
+};
+
+const executeTakealotPayout = async (
+  payout: PayoutRecord,
+  actor: AuditActor
+): Promise<AutomationResult> => {
+  const recipientEmail =
+    (payout.recipientData as { email?: string } | null)?.email ?? payout.payoutEmail;
+  if (!recipientEmail) {
+    throw new Error('Payout email is missing');
+  }
+  const giftData = payout.giftData as { productName?: string } | null;
+  const result = await issueTakealotGiftCard({
+    amountCents: payout.netCents,
+    recipientEmail,
+    reference: payout.id,
+    message: giftData?.productName
+      ? `Gift card for ${giftData.productName}`
+      : `${payout.childName ?? 'Dream Board'} gift card`,
+  });
+
+  if (result.status === 'completed') {
+    const externalRef = getGiftCardExternalRef(result);
+    await markCompletedPayout({ payout, externalRef, actor });
+    return { payoutId: payout.id, status: 'completed', externalRef };
+  }
+
+  if (result.status === 'pending') {
+    const externalRef = getGiftCardExternalRef(result);
+    await markPendingPayout({ payout, externalRef, actor });
+    return { payoutId: payout.id, status: 'pending', externalRef };
+  }
+
+  await markFailedPayout({
+    payout,
+    errorMessage: result.errorMessage ?? 'Gift card automation failed',
+    actor,
+  });
+  return { payoutId: payout.id, status: 'failed' };
+};
+
+const executeKarriPayout = async (
+  payout: PayoutRecord,
+  actor: AuditActor
+): Promise<AutomationResult> => {
+  const encryptedNumber = getCardNumberEncrypted(payout);
+  if (!encryptedNumber) {
+    throw new Error('Karri card number is missing');
+  }
+  const cardNumber = decryptSensitiveValue(encryptedNumber);
+  const result = await topUpKarriCard({
+    cardNumber,
+    amountCents: payout.netCents,
+    reference: payout.id,
+    description: `${payout.childName ?? 'Dream Board'} gift top-up`,
+  });
+
+  if (result.status === 'completed') {
+    await markCompletedPayout({ payout, externalRef: result.transactionId, actor });
+    return { payoutId: payout.id, status: 'completed', externalRef: result.transactionId };
+  }
+
+  if (result.status === 'pending') {
+    await markPendingPayout({ payout, externalRef: result.transactionId, actor });
+    return { payoutId: payout.id, status: 'pending', externalRef: result.transactionId };
+  }
+
+  await markFailedPayout({
+    payout,
+    errorMessage: result.errorMessage ?? 'Karri top-up failed',
+    actor,
+  });
+  return { payoutId: payout.id, status: 'failed' };
+};
+
+const executeDonationPayout = async (
+  payout: PayoutRecord,
+  actor: AuditActor
+): Promise<AutomationResult> => {
+  const causeId = getCauseId(payout);
+  if (!causeId) {
+    throw new Error('Donation cause is missing');
+  }
+  const result = await createGivenGainDonation({
+    causeId,
+    amountCents: payout.netCents,
+    donorName: payout.childName ?? 'ChipIn donor',
+    donorEmail: payout.payoutEmail ?? 'noreply@chipin.co.za',
+    reference: payout.id,
+    message: 'ChipIn group gift donation',
+  });
+
+  if (result.status === 'completed') {
+    await markCompletedPayout({
+      payout,
+      externalRef: result.donationId,
+      actor,
+      metadata: buildDonationMetadata(result),
+    });
+    return { payoutId: payout.id, status: 'completed', externalRef: result.donationId };
+  }
+
+  if (result.status === 'pending') {
+    await markPendingPayout({
+      payout,
+      externalRef: result.donationId,
+      actor,
+      metadata: buildDonationMetadata(result),
+    });
+    return { payoutId: payout.id, status: 'pending', externalRef: result.donationId };
+  }
+
+  await markFailedPayout({
+    payout,
+    errorMessage: result.errorMessage ?? 'Donation automation failed',
+    actor,
+  });
+  return { payoutId: payout.id, status: 'failed' };
+};
+
 export async function executeAutomatedPayout(params: {
   payoutId: string;
   actor: AuditActor;
@@ -111,200 +297,29 @@ export async function executeAutomatedPayout(params: {
   }
 
   await markProcessing(payout);
-
-  await recordAuditEvent({
+  await recordAutomationEvent({
     actor: params.actor,
     action: 'payout.automation.started',
-    target: { type: 'payout', id: payout.id },
+    payoutId: payout.id,
     metadata: { payoutType: payout.type },
   });
 
   try {
-    if (payout.type === 'takealot_gift_card') {
-      const recipientEmail =
-        (payout.recipientData as { email?: string } | null)?.email ?? payout.payoutEmail;
-      if (!recipientEmail) {
-        throw new Error('Payout email is missing');
-      }
-      const giftData = payout.giftData as { productName?: string } | null;
-      const result = await issueTakealotGiftCard({
-        amountCents: payout.netCents,
-        recipientEmail,
-        reference: payout.id,
-        message: giftData?.productName
-          ? `Gift card for ${giftData.productName}`
-          : `${payout.childName ?? 'Dream Board'} gift card`,
-      });
-
-      if (result.status === 'completed') {
-        const externalRef = getGiftCardExternalRef(result);
-        await completePayout({ payoutId: payout.id, externalRef, actor: params.actor });
-        await recordAuditEvent({
-          actor: params.actor,
-          action: 'payout.automation.completed',
-          target: { type: 'payout', id: payout.id },
-          metadata: { externalRef },
-        });
-        return { payoutId: payout.id, status: 'completed', externalRef };
-      }
-
-      if (result.status === 'pending') {
-        const externalRef = getGiftCardExternalRef(result);
-        await db
-          .update(payouts)
-          .set({ status: 'processing', externalRef })
-          .where(eq(payouts.id, payout.id));
-        await recordAuditEvent({
-          actor: params.actor,
-          action: 'payout.automation.pending',
-          target: { type: 'payout', id: payout.id },
-          metadata: { externalRef },
-        });
-        return { payoutId: payout.id, status: 'pending', externalRef };
-      }
-
-      await failPayout({
-        payoutId: payout.id,
-        errorMessage: result.errorMessage ?? 'Gift card automation failed',
-        actor: params.actor,
-      });
-      await recordAuditEvent({
-        actor: params.actor,
-        action: 'payout.automation.failed',
-        target: { type: 'payout', id: payout.id },
-        metadata: { reason: result.errorMessage ?? 'Gift card automation failed' },
-      });
-      return { payoutId: payout.id, status: 'failed' };
+    switch (payout.type) {
+      case 'takealot_gift_card':
+        return await executeTakealotPayout(payout, params.actor);
+      case 'karri_card_topup':
+        return await executeKarriPayout(payout, params.actor);
+      case 'philanthropy_donation':
+        return await executeDonationPayout(payout, params.actor);
+      default:
+        throw new Error('Unsupported payout type');
     }
-
-    if (payout.type === 'karri_card_topup') {
-      const encryptedNumber = getCardNumberEncrypted(payout);
-      if (!encryptedNumber) {
-        throw new Error('Karri card number is missing');
-      }
-      const cardNumber = decryptSensitiveValue(encryptedNumber);
-      const result = await topUpKarriCard({
-        cardNumber,
-        amountCents: payout.netCents,
-        reference: payout.id,
-        description: `${payout.childName ?? 'Dream Board'} gift top-up`,
-      });
-
-      if (result.status === 'completed') {
-        await completePayout({
-          payoutId: payout.id,
-          externalRef: result.transactionId,
-          actor: params.actor,
-        });
-        await recordAuditEvent({
-          actor: params.actor,
-          action: 'payout.automation.completed',
-          target: { type: 'payout', id: payout.id },
-          metadata: { externalRef: result.transactionId },
-        });
-        return { payoutId: payout.id, status: 'completed', externalRef: result.transactionId };
-      }
-
-      if (result.status === 'pending') {
-        await db
-          .update(payouts)
-          .set({ status: 'processing', externalRef: result.transactionId })
-          .where(eq(payouts.id, payout.id));
-        await recordAuditEvent({
-          actor: params.actor,
-          action: 'payout.automation.pending',
-          target: { type: 'payout', id: payout.id },
-          metadata: { externalRef: result.transactionId },
-        });
-        return { payoutId: payout.id, status: 'pending', externalRef: result.transactionId };
-      }
-
-      await failPayout({
-        payoutId: payout.id,
-        errorMessage: result.errorMessage ?? 'Karri top-up failed',
-        actor: params.actor,
-      });
-      await recordAuditEvent({
-        actor: params.actor,
-        action: 'payout.automation.failed',
-        target: { type: 'payout', id: payout.id },
-        metadata: { reason: result.errorMessage ?? 'Karri top-up failed' },
-      });
-      return { payoutId: payout.id, status: 'failed' };
-    }
-
-    if (payout.type === 'philanthropy_donation') {
-      const causeId = getCauseId(payout);
-      if (!causeId) {
-        throw new Error('Donation cause is missing');
-      }
-      const result = await createGivenGainDonation({
-        causeId,
-        amountCents: payout.netCents,
-        donorName: payout.childName ?? 'ChipIn donor',
-        donorEmail: payout.payoutEmail ?? 'noreply@chipin.co.za',
-        reference: payout.id,
-        message: 'ChipIn group gift donation',
-      });
-
-      if (result.status === 'completed') {
-        await completePayout({
-          payoutId: payout.id,
-          externalRef: result.donationId,
-          actor: params.actor,
-        });
-        await recordAuditEvent({
-          actor: params.actor,
-          action: 'payout.automation.completed',
-          target: { type: 'payout', id: payout.id },
-          metadata: {
-            externalRef: result.donationId,
-            ...buildDonationMetadata(result),
-          },
-        });
-        return { payoutId: payout.id, status: 'completed', externalRef: result.donationId };
-      }
-
-      if (result.status === 'pending') {
-        await db
-          .update(payouts)
-          .set({ status: 'processing', externalRef: result.donationId })
-          .where(eq(payouts.id, payout.id));
-        await recordAuditEvent({
-          actor: params.actor,
-          action: 'payout.automation.pending',
-          target: { type: 'payout', id: payout.id },
-          metadata: { externalRef: result.donationId, ...buildDonationMetadata(result) },
-        });
-        return { payoutId: payout.id, status: 'pending', externalRef: result.donationId };
-      }
-
-      await failPayout({
-        payoutId: payout.id,
-        errorMessage: result.errorMessage ?? 'Donation automation failed',
-        actor: params.actor,
-      });
-      await recordAuditEvent({
-        actor: params.actor,
-        action: 'payout.automation.failed',
-        target: { type: 'payout', id: payout.id },
-        metadata: { reason: result.errorMessage ?? 'Donation automation failed' },
-      });
-      return { payoutId: payout.id, status: 'failed' };
-    }
-
-    throw new Error('Unsupported payout type');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Automation failed';
     log('error', 'payout_automation_failed', { payoutId: payout.id, message });
     Sentry.captureException(error);
-    await failPayout({ payoutId: payout.id, errorMessage: message, actor: params.actor });
-    await recordAuditEvent({
-      actor: params.actor,
-      action: 'payout.automation.failed',
-      target: { type: 'payout', id: payout.id },
-      metadata: { reason: message },
-    });
+    await markFailedPayout({ payout, errorMessage: message, actor: params.actor });
     throw error;
   }
 }

@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 import { db } from './index';
 import {
   apiKeys,
@@ -28,6 +30,10 @@ export async function seedDatabase() {
     })
     .returning({ id: hosts.id });
 
+  const futureBirthday = new Date();
+  futureBirthday.setMonth(futureBirthday.getMonth() + 3);
+  const birthdayDate = futureBirthday.toISOString().split('T')[0];
+
   const [dreamBoard] = await db
     .insert(dreamBoards)
     .values({
@@ -35,7 +41,7 @@ export async function seedDatabase() {
       slug: 'maya-birthday-demo',
       childName: 'Maya',
       childPhotoUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1',
-      birthdayDate: '2025-10-10',
+      birthdayDate,
       giftType: 'takealot_product',
       giftData: {
         type: 'takealot_product',
@@ -97,9 +103,11 @@ export async function seedDatabase() {
     .insert(apiKeys)
     .values({
       partnerName: 'Demo Partner',
-      keyHash: 'demo-hash',
-      keyPrefix: 'cpk_demo',
-      scopes: ['dream_boards:read'],
+      keyHash: createHash('sha256')
+        .update('cpk_test_0123456789abcdef0123456789abcdef')
+        .digest('hex'),
+      keyPrefix: 'cpk_test_',
+      scopes: ['dreamboards:read'],
       rateLimit: 1000,
       isActive: true,
     })

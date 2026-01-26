@@ -3,7 +3,7 @@ import { and, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
 import type { PaymentProvider } from '@/lib/payments';
 
 import { db } from './index';
-import { contributions, dreamBoards, hosts } from './schema';
+import { apiKeys, contributions, dreamBoards, hosts } from './schema';
 
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
@@ -78,6 +78,8 @@ export async function getDreamBoardBySlug(slug: string) {
       message: dreamBoards.message,
       deadline: dreamBoards.deadline,
       status: dreamBoards.status,
+      createdAt: dreamBoards.createdAt,
+      updatedAt: dreamBoards.updatedAt,
       raisedCents: sql<number>`COALESCE(SUM(${contributions.netCents}), 0)`.as('raised_cents'),
       contributionCount: sql<number>`COUNT(${contributions.id})`.as('contribution_count'),
     })
@@ -95,6 +97,48 @@ export async function getDreamBoardBySlug(slug: string) {
 
   return board ?? null;
 }
+
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const getDreamBoardByPublicId = async (identifier: string) => {
+  if (!uuidRegex.test(identifier)) {
+    return getDreamBoardBySlug(identifier);
+  }
+
+  const [board] = await db
+    .select({
+      id: dreamBoards.id,
+      slug: dreamBoards.slug,
+      childName: dreamBoards.childName,
+      childPhotoUrl: dreamBoards.childPhotoUrl,
+      birthdayDate: dreamBoards.birthdayDate,
+      giftType: dreamBoards.giftType,
+      giftData: dreamBoards.giftData,
+      overflowGiftData: dreamBoards.overflowGiftData,
+      goalCents: dreamBoards.goalCents,
+      payoutMethod: dreamBoards.payoutMethod,
+      message: dreamBoards.message,
+      deadline: dreamBoards.deadline,
+      status: dreamBoards.status,
+      createdAt: dreamBoards.createdAt,
+      updatedAt: dreamBoards.updatedAt,
+      raisedCents: sql<number>`COALESCE(SUM(${contributions.netCents}), 0)`.as('raised_cents'),
+      contributionCount: sql<number>`COUNT(${contributions.id})`.as('contribution_count'),
+    })
+    .from(dreamBoards)
+    .leftJoin(
+      contributions,
+      and(
+        eq(contributions.dreamBoardId, dreamBoards.id),
+        eq(contributions.paymentStatus, 'completed')
+      )
+    )
+    .where(eq(dreamBoards.id, identifier))
+    .groupBy(dreamBoards.id)
+    .limit(1);
+
+  return board ?? null;
+};
 
 export async function listDreamBoardsForHost(hostId: string) {
   return db
@@ -226,6 +270,26 @@ export async function updateContributionStatus(
     .update(contributions)
     .set({ paymentStatus: status, updatedAt: new Date() })
     .where(eq(contributions.id, id));
+}
+
+export async function getApiKeyByHash(params: { keyPrefix: string; keyHash: string }) {
+  const [apiKey] = await db
+    .select({
+      id: apiKeys.id,
+      partnerName: apiKeys.partnerName,
+      scopes: apiKeys.scopes,
+      rateLimit: apiKeys.rateLimit,
+      isActive: apiKeys.isActive,
+    })
+    .from(apiKeys)
+    .where(and(eq(apiKeys.keyPrefix, params.keyPrefix), eq(apiKeys.keyHash, params.keyHash)))
+    .limit(1);
+
+  return apiKey ?? null;
+}
+
+export async function markApiKeyUsed(apiKeyId: string) {
+  await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, apiKeyId));
 }
 
 export async function listContributionsForReconciliation(lookbackStart: Date, cutoff: Date) {

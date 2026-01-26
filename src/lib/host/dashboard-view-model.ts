@@ -50,29 +50,41 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
+const parseTakealotGift = (board: DashboardBoard): TakealotGiftData | null => {
+  if (board.giftType !== 'takealot_product') return null;
+  const result = takealotGiftSchema.safeParse(board.giftData);
+  return result.success ? result.data : null;
+};
+
+const parsePhilanthropyGift = (board: DashboardBoard): PhilanthropyGiftData | null => {
+  if (board.giftType !== 'philanthropy') return null;
+  const result = philanthropyGiftSchema.safeParse(board.giftData);
+  return result.success ? result.data : null;
+};
+
+const buildGiftInfo = (params: {
+  takealotGift: TakealotGiftData | null;
+  philanthropyGift: PhilanthropyGiftData | null;
+  fallbackImage: string;
+}) => ({
+  giftTitle: params.takealotGift?.productName ?? params.philanthropyGift?.causeName ?? '',
+  giftSubtitle: params.takealotGift
+    ? 'Dream gift'
+    : (params.philanthropyGift?.impactDescription ?? ''),
+  giftImage:
+    params.takealotGift?.productImage ??
+    params.philanthropyGift?.causeImage ??
+    params.fallbackImage,
+});
+
 const getGiftInfo = (board: DashboardBoard) => {
-  const takealotResult =
-    board.giftType === 'takealot_product' ? takealotGiftSchema.safeParse(board.giftData) : null;
-  const philanthropyResult =
-    board.giftType === 'philanthropy' ? philanthropyGiftSchema.safeParse(board.giftData) : null;
-
-  const takealotGift: TakealotGiftData | null = takealotResult?.success
-    ? takealotResult.data
-    : null;
-  const philanthropyGift: PhilanthropyGiftData | null = philanthropyResult?.success
-    ? philanthropyResult.data
-    : null;
-
-  const giftTitle = takealotGift?.productName ?? philanthropyGift?.causeName ?? '';
-  const giftSubtitle = takealotGift ? 'Dream gift' : (philanthropyGift?.impactDescription ?? '');
-  const giftImage =
-    takealotGift?.productImage ?? philanthropyGift?.causeImage ?? board.childPhotoUrl;
-
-  return {
-    giftTitle,
-    giftSubtitle,
-    giftImage,
-  };
+  const takealotGift = parseTakealotGift(board);
+  const philanthropyGift = parsePhilanthropyGift(board);
+  return buildGiftInfo({
+    takealotGift,
+    philanthropyGift,
+    fallbackImage: board.childPhotoUrl,
+  });
 };
 
 const getOverflowInfo = (board: DashboardBoard) => {

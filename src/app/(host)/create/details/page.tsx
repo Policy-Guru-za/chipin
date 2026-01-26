@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { requireSession } from '@/lib/auth/session';
 import { getDreamBoardDraft, updateDreamBoardDraft } from '@/lib/dream-boards/draft';
+import type { DreamBoardDraft } from '@/lib/dream-boards/draft';
 import { isDeadlineWithinRange } from '@/lib/dream-boards/validation';
 import { buildCreateFlowViewModel } from '@/lib/host/create-view-model';
 import { encryptSensitiveValue } from '@/lib/utils/encryption';
@@ -18,6 +19,158 @@ const detailsSchema = z.object({
 });
 
 const payoutMethodSchema = z.enum(['takealot_gift_card', 'karri_card_topup']);
+
+const detailsErrorMessages: Record<string, string> = {
+  invalid: 'Please complete all required fields.',
+  deadline: 'Deadline must be within the next 90 days.',
+  payout: 'Please select a payout method.',
+  karri: 'Enter a valid Karri Card number to continue.',
+  secure: 'Karri Card setup is unavailable right now. Please try again later.',
+};
+
+const getDetailsErrorMessage = (error?: string) =>
+  error ? (detailsErrorMessages[error] ?? null) : null;
+
+const getDefaultDeadline = (draft: DreamBoardDraft) => {
+  if (draft.deadline) return draft.deadline;
+  if (draft.birthdayDate && isDeadlineWithinRange(draft.birthdayDate)) {
+    return draft.birthdayDate;
+  }
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split('T')[0];
+};
+
+const resolvePayoutMethod = (draft: DreamBoardDraft, formData: FormData) => {
+  if (draft.giftType === 'philanthropy') {
+    return 'philanthropy_donation' as const;
+  }
+
+  const methodValue = formData.get('payoutMethod');
+  const parsed = payoutMethodSchema.safeParse(methodValue);
+  if (!parsed.success) {
+    redirect('/create/details?error=payout');
+  }
+  return parsed.data;
+};
+
+const resolveKarriCardNumber = (
+  payoutMethod: 'takealot_gift_card' | 'karri_card_topup' | 'philanthropy_donation',
+  formData: FormData,
+  draft: DreamBoardDraft
+) => {
+  if (payoutMethod !== 'karri_card_topup') {
+    return undefined;
+  }
+  if (!process.env.CARD_DATA_ENCRYPTION_KEY) {
+    redirect('/create/details?error=secure');
+  }
+  const rawCard = formData.get('karriCardNumber');
+  const rawValue = typeof rawCard === 'string' ? rawCard : '';
+  const sanitizedCard = rawValue.replace(/\s+/g, '').replace(/-/g, '');
+  const encrypted = sanitizedCard ? encryptSensitiveValue(sanitizedCard) : undefined;
+  if (!encrypted && !draft.karriCardNumberEncrypted) {
+    redirect('/create/details?error=karri');
+  }
+  return encrypted ?? draft.karriCardNumberEncrypted;
+};
+
+type DetailsFormProps = {
+  draft: DreamBoardDraft;
+  defaultDeadline: string;
+  isNonPhilanthropyGift: boolean;
+};
+
+const DetailsForm = ({ draft, defaultDeadline, isNonPhilanthropyGift }: DetailsFormProps) => (
+  <form action={saveDetailsAction} className="space-y-5">
+    <div className="space-y-2">
+      <label htmlFor="payoutEmail" className="text-sm font-medium text-text">
+        Payout email
+      </label>
+      <Input
+        id="payoutEmail"
+        name="payoutEmail"
+        type="email"
+        placeholder="you@example.com"
+        required
+        defaultValue={draft.payoutEmail ?? ''}
+      />
+      <p className="text-xs text-text-muted">
+        {draft.giftType === 'philanthropy'
+          ? 'We’ll email the donation confirmation.'
+          : 'We’ll email the gift card or Karri confirmation.'}
+      </p>
+    </div>
+
+    {isNonPhilanthropyGift ? (
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-text">Payout method</label>
+        <div className="grid gap-3">
+          <label className="flex items-center gap-3 rounded-2xl border border-border bg-white p-4">
+            <input
+              type="radio"
+              name="payoutMethod"
+              value="takealot_gift_card"
+              defaultChecked={draft.payoutMethod === 'takealot_gift_card'}
+              required
+            />
+            <span className="text-sm text-text">Takealot gift card</span>
+          </label>
+          <label className="flex items-center gap-3 rounded-2xl border border-border bg-white p-4">
+            <input
+              type="radio"
+              name="payoutMethod"
+              value="karri_card_topup"
+              defaultChecked={draft.payoutMethod === 'karri_card_topup'}
+              required
+            />
+            <span className="text-sm text-text">Karri Card top-up</span>
+          </label>
+        </div>
+      </div>
+    ) : null}
+
+    {isNonPhilanthropyGift ? (
+      <div className="space-y-2">
+        <label htmlFor="karriCardNumber" className="text-sm font-medium text-text">
+          Karri Card number
+        </label>
+        <Input
+          id="karriCardNumber"
+          name="karriCardNumber"
+          placeholder="Only required for Karri top-ups"
+          autoComplete="off"
+        />
+        <p className="text-xs text-text-muted">
+          {draft.karriCardNumberEncrypted
+            ? 'Card number saved. Re-enter to update.'
+            : 'We only use this to load Karri top-ups.'}
+        </p>
+      </div>
+    ) : null}
+
+    <div className="space-y-2">
+      <label htmlFor="message" className="text-sm font-medium text-text">
+        Personal message (optional)
+      </label>
+      <Input
+        id="message"
+        name="message"
+        placeholder="E.g., Maya would love your contribution toward her dream bike!"
+        defaultValue={draft.message ?? ''}
+      />
+    </div>
+
+    <div className="space-y-2">
+      <label htmlFor="deadline" className="text-sm font-medium text-text">
+        Contribution deadline
+      </label>
+      <Input id="deadline" name="deadline" type="date" required defaultValue={defaultDeadline} />
+    </div>
+
+    <Button type="submit">Review & create</Button>
+  </form>
+);
 
 async function saveDetailsAction(formData: FormData) {
   'use server';
@@ -31,7 +184,6 @@ async function saveDetailsAction(formData: FormData) {
   const payoutEmail = formData.get('payoutEmail');
   const message = formData.get('message');
   const deadline = formData.get('deadline');
-  const karriCardNumber = formData.get('karriCardNumber');
 
   const result = detailsSchema.safeParse({ payoutEmail, message, deadline });
   if (!result.success) {
@@ -42,35 +194,8 @@ async function saveDetailsAction(formData: FormData) {
     redirect('/create/details?error=deadline');
   }
 
-  let payoutMethod: 'takealot_gift_card' | 'karri_card_topup' | 'philanthropy_donation';
-  let karriCardNumberEncrypted: string | undefined = draft.karriCardNumberEncrypted;
-
-  if (draft.giftType === 'philanthropy') {
-    payoutMethod = 'philanthropy_donation';
-  } else {
-    const methodValue = formData.get('payoutMethod');
-    const parsed = payoutMethodSchema.safeParse(methodValue);
-    if (!parsed.success) {
-      redirect('/create/details?error=payout');
-    }
-    payoutMethod = parsed.data;
-  }
-
-  if (payoutMethod === 'karri_card_topup') {
-    if (!process.env.CARD_DATA_ENCRYPTION_KEY) {
-      redirect('/create/details?error=secure');
-    }
-    const rawCard = typeof karriCardNumber === 'string' ? karriCardNumber : '';
-    const sanitizedCard = rawCard.replace(/\s+/g, '').replace(/-/g, '');
-    if (sanitizedCard) {
-      karriCardNumberEncrypted = encryptSensitiveValue(sanitizedCard);
-    }
-    if (!karriCardNumberEncrypted) {
-      redirect('/create/details?error=karri');
-    }
-  } else {
-    karriCardNumberEncrypted = undefined;
-  }
+  const payoutMethod = resolvePayoutMethod(draft, formData);
+  const karriCardNumberEncrypted = resolveKarriCardNumber(payoutMethod, formData, draft);
 
   await updateDreamBoardDraft(session.hostId, {
     payoutEmail: result.data.payoutEmail,
@@ -103,15 +228,9 @@ export default async function CreateDetailsPage({
   }
 
   const error = searchParams?.error;
-  const defaultDeadline = (() => {
-    if (draft.deadline) return draft.deadline;
-    if (draft.birthdayDate && isDeadlineWithinRange(draft.birthdayDate)) {
-      return draft.birthdayDate;
-    }
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  })();
+  const errorMessage = getDetailsErrorMessage(error);
+  const defaultDeadline = getDefaultDeadline(draft);
+  const isNonPhilanthropyGift = draft.giftType !== 'philanthropy';
 
   return (
     <CreateFlowShell stepLabel={view.stepLabel} title={view.title} subtitle={view.subtitle}>
@@ -123,126 +242,17 @@ export default async function CreateDetailsPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {error === 'invalid' ? (
+          {errorMessage ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Please complete all required fields.
-            </div>
-          ) : null}
-          {error === 'deadline' ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Deadline must be within the next 90 days.
-            </div>
-          ) : null}
-          {error === 'payout' ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Please select a payout method.
-            </div>
-          ) : null}
-          {error === 'karri' ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Enter a valid Karri Card number to continue.
-            </div>
-          ) : null}
-          {error === 'secure' ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              Karri Card setup is unavailable right now. Please try again later.
+              {errorMessage}
             </div>
           ) : null}
 
-          <form action={saveDetailsAction} className="space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="payoutEmail" className="text-sm font-medium text-text">
-                Payout email
-              </label>
-              <Input
-                id="payoutEmail"
-                name="payoutEmail"
-                type="email"
-                placeholder="you@example.com"
-                required
-                defaultValue={draft.payoutEmail ?? ''}
-              />
-              <p className="text-xs text-text-muted">
-                {draft.giftType === 'philanthropy'
-                  ? 'We’ll email the donation confirmation.'
-                  : 'We’ll email the gift card or Karri confirmation.'}
-              </p>
-            </div>
-
-            {draft.giftType !== 'philanthropy' ? (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-text">Payout method</label>
-                <div className="grid gap-3">
-                  <label className="flex items-center gap-3 rounded-2xl border border-border bg-white p-4">
-                    <input
-                      type="radio"
-                      name="payoutMethod"
-                      value="takealot_gift_card"
-                      defaultChecked={draft.payoutMethod === 'takealot_gift_card'}
-                      required
-                    />
-                    <span className="text-sm text-text">Takealot gift card</span>
-                  </label>
-                  <label className="flex items-center gap-3 rounded-2xl border border-border bg-white p-4">
-                    <input
-                      type="radio"
-                      name="payoutMethod"
-                      value="karri_card_topup"
-                      defaultChecked={draft.payoutMethod === 'karri_card_topup'}
-                      required
-                    />
-                    <span className="text-sm text-text">Karri Card top-up</span>
-                  </label>
-                </div>
-              </div>
-            ) : null}
-
-            {draft.giftType !== 'philanthropy' ? (
-              <div className="space-y-2">
-                <label htmlFor="karriCardNumber" className="text-sm font-medium text-text">
-                  Karri Card number
-                </label>
-                <Input
-                  id="karriCardNumber"
-                  name="karriCardNumber"
-                  placeholder="Only required for Karri top-ups"
-                  autoComplete="off"
-                />
-                <p className="text-xs text-text-muted">
-                  {draft.karriCardNumberEncrypted
-                    ? 'Card number saved. Re-enter to update.'
-                    : 'We only use this to load Karri top-ups.'}
-                </p>
-              </div>
-            ) : null}
-
-            <div className="space-y-2">
-              <label htmlFor="message" className="text-sm font-medium text-text">
-                Personal message (optional)
-              </label>
-              <Input
-                id="message"
-                name="message"
-                placeholder="E.g., Maya would love your contribution toward her dream bike!"
-                defaultValue={draft.message ?? ''}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="deadline" className="text-sm font-medium text-text">
-                Contribution deadline
-              </label>
-              <Input
-                id="deadline"
-                name="deadline"
-                type="date"
-                required
-                defaultValue={defaultDeadline}
-              />
-            </div>
-
-            <Button type="submit">Review & create</Button>
-          </form>
+          <DetailsForm
+            draft={draft}
+            defaultDeadline={defaultDeadline}
+            isNonPhilanthropyGift={isNonPhilanthropyGift}
+          />
         </CardContent>
       </Card>
     </CreateFlowShell>

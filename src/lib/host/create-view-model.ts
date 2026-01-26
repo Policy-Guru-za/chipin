@@ -74,16 +74,24 @@ const getGoalLabel = (draft?: DreamBoardDraft) => {
   return `R${(draft.goalCents / 100).toFixed(2)}`;
 };
 
-const getCompletionState = (draft?: DreamBoardDraft | null) => {
-  const karriComplete =
-    draft?.payoutMethod !== 'karri_card_topup' || Boolean(draft?.karriCardNumberEncrypted);
-  return {
-    childComplete: [draft?.childName, draft?.birthdayDate, draft?.childPhotoUrl].every(Boolean),
-    giftComplete: [draft?.giftType, draft?.giftData, draft?.goalCents].every(Boolean),
-    detailsComplete:
-      [draft?.payoutEmail, draft?.deadline, draft?.payoutMethod].every(Boolean) && karriComplete,
-  };
-};
+const isChildComplete = (draft?: DreamBoardDraft | null) =>
+  [draft?.childName, draft?.birthdayDate, draft?.childPhotoUrl].every(Boolean);
+
+const isGiftComplete = (draft?: DreamBoardDraft | null) =>
+  [draft?.giftType, draft?.giftData, draft?.goalCents].every(Boolean);
+
+const isKarriComplete = (draft?: DreamBoardDraft | null) =>
+  draft?.payoutMethod !== 'karri_card_topup' || Boolean(draft?.karriCardNumberEncrypted);
+
+const isDetailsComplete = (draft?: DreamBoardDraft | null) =>
+  [draft?.payoutEmail, draft?.deadline, draft?.payoutMethod].every(Boolean) &&
+  isKarriComplete(draft);
+
+const getCompletionState = (draft?: DreamBoardDraft | null) => ({
+  childComplete: isChildComplete(draft),
+  giftComplete: isGiftComplete(draft),
+  detailsComplete: isDetailsComplete(draft),
+});
 
 const redirectRules: Record<
   CreateFlowStep,

@@ -22,31 +22,44 @@ export const getWebhookToleranceMinutes = () => {
 
 const hasTimezone = (value: string) => /Z$|[+-]\d{2}:?\d{2}$/.test(value);
 
+const parseNumericTimestamp = (value: number) => {
+  if (!Number.isFinite(value)) return null;
+  const normalized = value < 1_000_000_000_000 ? value * 1000 : value;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const parseDigitTimestamp = (value: string) => {
+  if (/^\d{10}$/.test(value)) {
+    const date = new Date(Number(value) * 1000);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  if (/^\d{13}$/.test(value)) {
+    const date = new Date(Number(value));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  return null;
+};
+
+const parseIsoTimestamp = (value: string) => {
+  const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+  const withZone = hasTimezone(normalized) ? normalized : `${normalized}Z`;
+  const date = new Date(withZone);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const parseTimestampValue = (value: string | number) => {
   if (typeof value === 'number') {
-    if (!Number.isFinite(value)) return null;
-    const normalized = value < 1_000_000_000_000 ? value * 1000 : value;
-    const date = new Date(normalized);
-    return Number.isNaN(date.getTime()) ? null : date;
+    return parseNumericTimestamp(value);
   }
 
   const trimmed = value.trim();
   if (!trimmed) return null;
 
-  if (/^\d{10}$/.test(trimmed)) {
-    const date = new Date(Number(trimmed) * 1000);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
+  const digitTimestamp = parseDigitTimestamp(trimmed);
+  if (digitTimestamp) return digitTimestamp;
 
-  if (/^\d{13}$/.test(trimmed)) {
-    const date = new Date(Number(trimmed));
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
-
-  const normalized = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
-  const withZone = hasTimezone(normalized) ? normalized : `${normalized}Z`;
-  const date = new Date(withZone);
-  return Number.isNaN(date.getTime()) ? null : date;
+  return parseIsoTimestamp(trimmed);
 };
 
 export const extractTimestampValue = (payload: Record<string, unknown>, keys: string[]) => {

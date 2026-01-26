@@ -5,26 +5,26 @@ const loadHandler = async () => {
   return import('@/app/api/internal/payments/reconcile/route');
 };
 
-describe('payments reconciliation job', () => {
-  const originalEnv = {
-    INTERNAL_JOB_SECRET: process.env.INTERNAL_JOB_SECRET,
-    RECONCILIATION_ALERTS_ENABLED: process.env.RECONCILIATION_ALERTS_ENABLED,
-    RECONCILIATION_ALERT_EMAIL: process.env.RECONCILIATION_ALERT_EMAIL,
-    RECONCILIATION_LONG_TAIL_HOURS: process.env.RECONCILIATION_LONG_TAIL_HOURS,
-  };
+const originalEnv = {
+  INTERNAL_JOB_SECRET: process.env.INTERNAL_JOB_SECRET,
+  RECONCILIATION_ALERTS_ENABLED: process.env.RECONCILIATION_ALERTS_ENABLED,
+  RECONCILIATION_ALERT_EMAIL: process.env.RECONCILIATION_ALERT_EMAIL,
+  RECONCILIATION_LONG_TAIL_HOURS: process.env.RECONCILIATION_LONG_TAIL_HOURS,
+};
 
-  afterEach(() => {
-    process.env.INTERNAL_JOB_SECRET = originalEnv.INTERNAL_JOB_SECRET;
-    process.env.RECONCILIATION_ALERTS_ENABLED = originalEnv.RECONCILIATION_ALERTS_ENABLED;
-    process.env.RECONCILIATION_ALERT_EMAIL = originalEnv.RECONCILIATION_ALERT_EMAIL;
-    process.env.RECONCILIATION_LONG_TAIL_HOURS = originalEnv.RECONCILIATION_LONG_TAIL_HOURS;
-    vi.unmock('@/lib/db/queries');
-    vi.unmock('@/lib/payments/ozow');
-    vi.unmock('@/lib/payments/snapscan');
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+afterEach(() => {
+  process.env.INTERNAL_JOB_SECRET = originalEnv.INTERNAL_JOB_SECRET;
+  process.env.RECONCILIATION_ALERTS_ENABLED = originalEnv.RECONCILIATION_ALERTS_ENABLED;
+  process.env.RECONCILIATION_ALERT_EMAIL = originalEnv.RECONCILIATION_ALERT_EMAIL;
+  process.env.RECONCILIATION_LONG_TAIL_HOURS = originalEnv.RECONCILIATION_LONG_TAIL_HOURS;
+  vi.unmock('@/lib/db/queries');
+  vi.unmock('@/lib/payments/ozow');
+  vi.unmock('@/lib/payments/snapscan');
+  vi.clearAllMocks();
+  vi.resetModules();
+});
 
+describe('payments reconciliation job - updates', () => {
   it('updates completed contributions from providers', async () => {
     process.env.INTERNAL_JOB_SECRET = 'job-secret';
     process.env.RECONCILIATION_ALERTS_ENABLED = 'false';
@@ -115,7 +115,9 @@ describe('payments reconciliation job', () => {
     expect(listSnapScanPayments).toHaveBeenCalledTimes(1);
     expect(listSnapScanPayments.mock.calls[0][0]?.startDate).toBe('2026-01-22T08:10:00.000Z');
   });
+});
 
+describe('payments reconciliation job - mismatches', () => {
   it('flags mismatches without updating', async () => {
     process.env.INTERNAL_JOB_SECRET = 'job-secret';
     process.env.RECONCILIATION_ALERTS_ENABLED = 'false';
@@ -172,7 +174,9 @@ describe('payments reconciliation job', () => {
     expect(updateContributionStatus).not.toHaveBeenCalled();
     expect(markDreamBoardFundedIfNeeded).not.toHaveBeenCalled();
   });
+});
 
+describe('payments reconciliation job - long tail', () => {
   it('reconciles long-tail contributions', async () => {
     process.env.INTERNAL_JOB_SECRET = 'job-secret';
     process.env.RECONCILIATION_ALERTS_ENABLED = 'false';

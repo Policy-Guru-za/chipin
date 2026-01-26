@@ -37,28 +37,28 @@ const mockRateLimit = (allowed: boolean) => {
   }));
 };
 
-describe('PayFast webhook integration', () => {
-  const originalEnv = {
-    PAYFAST_MERCHANT_ID: process.env.PAYFAST_MERCHANT_ID,
-    PAYFAST_MERCHANT_KEY: process.env.PAYFAST_MERCHANT_KEY,
-    PAYFAST_PASSPHRASE: process.env.PAYFAST_PASSPHRASE,
-    PAYFAST_SANDBOX: process.env.PAYFAST_SANDBOX,
-    NODE_ENV: process.env.NODE_ENV,
-  };
+const originalEnv = {
+  PAYFAST_MERCHANT_ID: process.env.PAYFAST_MERCHANT_ID,
+  PAYFAST_MERCHANT_KEY: process.env.PAYFAST_MERCHANT_KEY,
+  PAYFAST_PASSPHRASE: process.env.PAYFAST_PASSPHRASE,
+  PAYFAST_SANDBOX: process.env.PAYFAST_SANDBOX,
+  NODE_ENV: process.env.NODE_ENV,
+};
 
-  afterEach(() => {
-    process.env.PAYFAST_MERCHANT_ID = originalEnv.PAYFAST_MERCHANT_ID;
-    process.env.PAYFAST_MERCHANT_KEY = originalEnv.PAYFAST_MERCHANT_KEY;
-    process.env.PAYFAST_PASSPHRASE = originalEnv.PAYFAST_PASSPHRASE;
-    process.env.PAYFAST_SANDBOX = originalEnv.PAYFAST_SANDBOX;
-    process.env.NODE_ENV = originalEnv.NODE_ENV;
-    vi.unmock('@/lib/auth/rate-limit');
-    vi.unmock('@/lib/db/queries');
-    vi.unmock('@/lib/payments/payfast');
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+afterEach(() => {
+  process.env.PAYFAST_MERCHANT_ID = originalEnv.PAYFAST_MERCHANT_ID;
+  process.env.PAYFAST_MERCHANT_KEY = originalEnv.PAYFAST_MERCHANT_KEY;
+  process.env.PAYFAST_PASSPHRASE = originalEnv.PAYFAST_PASSPHRASE;
+  process.env.PAYFAST_SANDBOX = originalEnv.PAYFAST_SANDBOX;
+  process.env.NODE_ENV = originalEnv.NODE_ENV;
+  vi.unmock('@/lib/auth/rate-limit');
+  vi.unmock('@/lib/db/queries');
+  vi.unmock('@/lib/payments/payfast');
+  vi.clearAllMocks();
+  vi.resetModules();
+});
 
+describe('PayFast webhook integration - success', () => {
   it('accepts a valid ITN payload and updates contribution state', async () => {
     process.env.PAYFAST_MERCHANT_ID = '10000100';
     process.env.PAYFAST_MERCHANT_KEY = '46f0cd694581a';
@@ -125,7 +125,9 @@ describe('PayFast webhook integration', () => {
     expect(updateContributionStatus).toHaveBeenCalledWith('contrib-1', 'completed');
     expect(markDreamBoardFundedIfNeeded).toHaveBeenCalledWith('board-1');
   });
+});
 
+describe('PayFast webhook integration - errors', () => {
   it('rejects requests when rate limited', async () => {
     mockRateLimit(false);
 
