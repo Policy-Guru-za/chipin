@@ -66,7 +66,7 @@ export const enforceApiAuth = async (
   }
 
   const rateLimit = await enforceApiRateLimit({
-    keyId: authResult.apiKey.id,
+    keyId: `partner:${authResult.apiKey.partnerId}`,
     limit: authResult.apiKey.rateLimit,
     burst: getBurstLimit(authResult.apiKey.rateLimit),
   });

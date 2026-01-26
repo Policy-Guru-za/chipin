@@ -12,12 +12,19 @@ const originalEnv = {
   RECONCILIATION_LONG_TAIL_HOURS: process.env.RECONCILIATION_LONG_TAIL_HOURS,
 };
 
+const mockCache = () => {
+  vi.doMock('@/lib/dream-boards/cache', () => ({
+    invalidateDreamBoardCacheById: vi.fn(async () => undefined),
+  }));
+};
+
 afterEach(() => {
   process.env.INTERNAL_JOB_SECRET = originalEnv.INTERNAL_JOB_SECRET;
   process.env.RECONCILIATION_ALERTS_ENABLED = originalEnv.RECONCILIATION_ALERTS_ENABLED;
   process.env.RECONCILIATION_ALERT_EMAIL = originalEnv.RECONCILIATION_ALERT_EMAIL;
   process.env.RECONCILIATION_LONG_TAIL_HOURS = originalEnv.RECONCILIATION_LONG_TAIL_HOURS;
   vi.unmock('@/lib/db/queries');
+  vi.unmock('@/lib/dream-boards/cache');
   vi.unmock('@/lib/payments/ozow');
   vi.unmock('@/lib/payments/snapscan');
   vi.clearAllMocks();
@@ -28,6 +35,7 @@ describe('payments reconciliation job - updates', () => {
   it('updates completed contributions from providers', async () => {
     process.env.INTERNAL_JOB_SECRET = 'job-secret';
     process.env.RECONCILIATION_ALERTS_ENABLED = 'false';
+    mockCache();
 
     const listContributionsForReconciliation = vi.fn(async () => [
       {
@@ -121,6 +129,7 @@ describe('payments reconciliation job - mismatches', () => {
   it('flags mismatches without updating', async () => {
     process.env.INTERNAL_JOB_SECRET = 'job-secret';
     process.env.RECONCILIATION_ALERTS_ENABLED = 'false';
+    mockCache();
 
     const listContributionsForReconciliation = vi.fn(async () => [
       {
@@ -181,6 +190,7 @@ describe('payments reconciliation job - long tail', () => {
     process.env.INTERNAL_JOB_SECRET = 'job-secret';
     process.env.RECONCILIATION_ALERTS_ENABLED = 'false';
     process.env.RECONCILIATION_LONG_TAIL_HOURS = '168';
+    mockCache();
 
     const listContributionsForReconciliation = vi.fn(async () => []);
     const listContributionsForLongTailReconciliation = vi.fn(async () => [

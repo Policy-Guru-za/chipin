@@ -8,14 +8,15 @@ import { ContributorChips } from '@/components/dream-board/ContributorChips';
 import { DreamBoardCard } from '@/components/dream-board/DreamBoardCard';
 import { ProgressBar } from '@/components/dream-board/ProgressBar';
 import { Button } from '@/components/ui/button';
-import { getDreamBoardBySlug, listRecentContributors } from '@/lib/db/queries';
+import { listRecentContributors } from '@/lib/db/queries';
+import { getCachedDreamBoardBySlug } from '@/lib/dream-boards/cache';
 import { buildDreamBoardMetadata } from '@/lib/dream-boards/metadata';
 import { buildGuestViewModel, type GuestViewModel } from '@/lib/dream-boards/view-model';
 import { formatZar } from '@/lib/utils/money';
 
 type Contributor = Awaited<ReturnType<typeof listRecentContributors>>[number];
 
-const getBoard = cache(async (slug: string) => getDreamBoardBySlug(slug));
+const getBoard = cache(async (slug: string) => getCachedDreamBoardBySlug(slug));
 
 const getHeroCopy = (view: GuestViewModel) => {
   if (view.showCharityOverflow) {

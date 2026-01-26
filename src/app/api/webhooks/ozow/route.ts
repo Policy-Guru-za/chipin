@@ -12,6 +12,7 @@ import {
   markDreamBoardFundedIfNeeded,
   updateContributionStatus,
 } from '@/lib/db/queries';
+import { invalidateDreamBoardCacheById } from '@/lib/dream-boards/cache';
 import { log } from '@/lib/observability/logger';
 
 const getClientIp = (request: NextRequest) =>
@@ -71,7 +72,11 @@ export async function POST(request: NextRequest) {
   }
 
   const status = mapOzowStatus(payload);
+  if (contribution.paymentStatus === status) {
+    return NextResponse.json({ received: true });
+  }
   await updateContributionStatus(contribution.id, status);
+  await invalidateDreamBoardCacheById(contribution.dreamBoardId);
 
   if (status === 'completed') {
     await markDreamBoardFundedIfNeeded(contribution.dreamBoardId);

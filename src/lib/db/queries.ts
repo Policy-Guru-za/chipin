@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt, ne, sql } from 'drizzle-orm';
 
 import type { PaymentProvider } from '@/lib/payments';
 
@@ -60,6 +60,16 @@ export async function getDreamBoardById(id: string, hostId: string) {
     .limit(1);
 
   return board ?? null;
+}
+
+export async function getDreamBoardSlugById(id: string) {
+  const [board] = await db
+    .select({ slug: dreamBoards.slug })
+    .from(dreamBoards)
+    .where(eq(dreamBoards.id, id))
+    .limit(1);
+
+  return board?.slug ?? null;
 }
 
 export async function getDreamBoardBySlug(slug: string, partnerId?: string) {
@@ -277,7 +287,7 @@ export async function updateContributionStatus(
   await db
     .update(contributions)
     .set({ paymentStatus: status, updatedAt: new Date() })
-    .where(eq(contributions.id, id));
+    .where(and(eq(contributions.id, id), ne(contributions.paymentStatus, status)));
 }
 
 export async function getApiKeyByHash(params: { keyPrefix: string; keyHash: string }) {

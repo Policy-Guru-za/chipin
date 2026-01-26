@@ -37,6 +37,12 @@ const mockRateLimit = (allowed: boolean) => {
   }));
 };
 
+const mockCache = () => {
+  vi.doMock('@/lib/dream-boards/cache', () => ({
+    invalidateDreamBoardCacheById: vi.fn(async () => undefined),
+  }));
+};
+
 const originalEnv = {
   PAYFAST_MERCHANT_ID: process.env.PAYFAST_MERCHANT_ID,
   PAYFAST_MERCHANT_KEY: process.env.PAYFAST_MERCHANT_KEY,
@@ -52,6 +58,7 @@ afterEach(() => {
   process.env.PAYFAST_SANDBOX = originalEnv.PAYFAST_SANDBOX;
   process.env.NODE_ENV = originalEnv.NODE_ENV;
   vi.unmock('@/lib/auth/rate-limit');
+  vi.unmock('@/lib/dream-boards/cache');
   vi.unmock('@/lib/db/queries');
   vi.unmock('@/lib/payments/payfast');
   vi.clearAllMocks();
@@ -66,6 +73,7 @@ describe('PayFast webhook integration - success', () => {
     process.env.PAYFAST_SANDBOX = 'true';
     process.env.NODE_ENV = 'test';
     mockRateLimit(true);
+    mockCache();
 
     const contribution = {
       id: 'contrib-1',
@@ -130,6 +138,7 @@ describe('PayFast webhook integration - success', () => {
 describe('PayFast webhook integration - errors', () => {
   it('rejects requests when rate limited', async () => {
     mockRateLimit(false);
+    mockCache();
 
     const { POST } = await loadHandler();
     const response = await POST(
@@ -153,6 +162,7 @@ describe('PayFast webhook integration - errors', () => {
     process.env.PAYFAST_SANDBOX = 'true';
     process.env.NODE_ENV = 'test';
     mockRateLimit(true);
+    mockCache();
 
     const contribution = {
       id: 'contrib-1',

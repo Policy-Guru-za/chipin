@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import { kv } from '@vercel/kv';
 
 const HOUR_SECONDS = 60 * 60;
@@ -34,21 +36,37 @@ export const enforceApiRateLimit = async (params: {
 }): Promise<ApiRateLimitResult> => {
   const hourKey = `rate:api:${params.keyId}:hour`;
   const minuteKey = `rate:api:${params.keyId}:minute`;
+  const now = Date.now();
+  const minuteWindowStart = now - MINUTE_SECONDS * 1000;
 
-  const [hourCount, minuteCount] = await Promise.all([kv.incr(hourKey), kv.incr(minuteKey)]);
+  const hourCount = await kv.incr(hourKey);
+  await kv.expire(hourKey, HOUR_SECONDS, 'NX');
 
-  await Promise.all([
-    kv.expire(hourKey, HOUR_SECONDS, 'NX'),
-    kv.expire(minuteKey, MINUTE_SECONDS, 'NX'),
+  await kv.zremrangebyscore(minuteKey, 0, minuteWindowStart);
+  await kv.zadd(minuteKey, { score: now, member: `${now}-${randomUUID()}` });
+  await kv.expire(minuteKey, MINUTE_SECONDS);
+
+  const [hourTtl, minuteCount, minuteEntries] = await Promise.all([
+    kv.ttl(hourKey),
+    kv.zcard(minuteKey),
+    kv.zrange(minuteKey, 0, 0, { withScores: true }),
   ]);
 
-  const [hourTtl, minuteTtl] = await Promise.all([kv.ttl(hourKey), kv.ttl(minuteKey)]);
+  const rawOldestScore =
+    Array.isArray(minuteEntries) && minuteEntries.length > 0
+      ? (minuteEntries[0] as { score: number | string }).score
+      : undefined;
+  const oldestScore = typeof rawOldestScore === 'number' ? rawOldestScore : Number(rawOldestScore);
+
+  const minuteLimit = Math.min(params.burst, params.limit);
   const remaining = Math.max(0, params.limit - hourCount);
   const hourExceeded = hourCount > params.limit;
-  const minuteExceeded = minuteCount > params.burst;
+  const minuteExceeded = minuteCount > minuteLimit;
   const allowed = !hourExceeded && !minuteExceeded;
   const hourResetSeconds = hourTtl > 0 ? hourTtl : HOUR_SECONDS;
-  const minuteResetSeconds = minuteTtl > 0 ? minuteTtl : MINUTE_SECONDS;
+  const minuteResetSeconds = Number.isFinite(oldestScore)
+    ? Math.max(1, Math.ceil((oldestScore + MINUTE_SECONDS * 1000 - now) / 1000))
+    : MINUTE_SECONDS;
   const limitingResetSeconds = hourExceeded ? hourResetSeconds : minuteResetSeconds;
   const resetSeconds = allowed ? hourResetSeconds : limitingResetSeconds;
   const retryAfterSeconds = allowed ? undefined : limitingResetSeconds;

@@ -14,6 +14,7 @@ import {
   markDreamBoardFundedIfNeeded,
   updateContributionStatus,
 } from '@/lib/db/queries';
+import { invalidateDreamBoardCacheById } from '@/lib/dream-boards/cache';
 import { log } from '@/lib/observability/logger';
 
 type WebhookContext = {
@@ -157,7 +158,11 @@ export async function POST(request: NextRequest) {
   }
 
   const status = mapSnapScanStatus(payload);
+  if (contribution.paymentStatus === status) {
+    return NextResponse.json({ received: true });
+  }
   await updateContributionStatus(contribution.id, status);
+  await invalidateDreamBoardCacheById(contribution.dreamBoardId);
 
   if (status === 'completed') {
     await markDreamBoardFundedIfNeeded(contribution.dreamBoardId);

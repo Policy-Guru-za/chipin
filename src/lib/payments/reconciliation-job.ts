@@ -1,6 +1,7 @@
 import type { listContributionsForReconciliation } from '@/lib/db/queries';
 
 import { markDreamBoardFundedIfNeeded, updateContributionStatus } from '@/lib/db/queries';
+import { invalidateDreamBoardCacheById } from '@/lib/dream-boards/cache';
 import { sendEmail } from '@/lib/integrations/email';
 import { log } from '@/lib/observability/logger';
 import {
@@ -107,6 +108,7 @@ const applyReconciliationDecision = async (
 
   if (decision.action === 'update') {
     await updateContributionStatus(contribution.id, decision.status);
+    await invalidateDreamBoardCacheById(contribution.dreamBoardId);
     if (decision.status === 'completed') {
       await markDreamBoardFundedIfNeeded(contribution.dreamBoardId);
       context.updated += 1;

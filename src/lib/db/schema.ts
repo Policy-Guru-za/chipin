@@ -174,6 +174,9 @@ export const contributions = pgTable(
     dreamBoardIdx: index('idx_contributions_dream_board').on(table.dreamBoardId),
     partnerIdx: index('idx_contributions_partner').on(table.partnerId),
     statusIdx: index('idx_contributions_status').on(table.paymentStatus),
+    pendingProcessingIdx: index('idx_contributions_pending_processing')
+      .on(table.paymentStatus, table.createdAt)
+      .where(sql`${table.paymentStatus} IN ('pending', 'processing')`),
     paymentRefIdx: index('idx_contributions_payment_ref').on(
       table.paymentProvider,
       table.paymentRef

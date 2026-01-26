@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 
 import { ProgressBar } from '@/components/dream-board/ProgressBar';
 import { Button } from '@/components/ui/button';
-import { getContributionByPaymentRef, getDreamBoardBySlug } from '@/lib/db/queries';
+import { getContributionByPaymentRef } from '@/lib/db/queries';
+import { getCachedDreamBoardBySlug } from '@/lib/dream-boards/cache';
 import { buildThankYouViewModel } from '@/lib/dream-boards/view-model';
 import type { PaymentProvider } from '@/lib/payments';
 
@@ -13,7 +14,7 @@ type ThanksPageProps = {
 };
 
 export default async function ThankYouPage({ params, searchParams }: ThanksPageProps) {
-  const board = await getDreamBoardBySlug(params.slug);
+  const board = await getCachedDreamBoardBySlug(params.slug);
   if (!board) {
     notFound();
   }

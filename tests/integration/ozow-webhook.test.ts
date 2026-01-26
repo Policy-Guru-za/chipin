@@ -14,9 +14,16 @@ const mockRateLimit = (allowed: boolean) => {
   }));
 };
 
+const mockCache = () => {
+  vi.doMock('@/lib/dream-boards/cache', () => ({
+    invalidateDreamBoardCacheById: vi.fn(async () => undefined),
+  }));
+};
+
 describe('Ozow webhook integration', () => {
   afterEach(() => {
     vi.unmock('@/lib/auth/rate-limit');
+    vi.unmock('@/lib/dream-boards/cache');
     vi.unmock('@/lib/db/queries');
     vi.unmock('@/lib/payments/ozow');
     vi.clearAllMocks();
@@ -33,6 +40,7 @@ describe('Ozow webhook integration', () => {
     };
 
     mockRateLimit(true);
+    mockCache();
 
     const getContributionByPaymentRef = vi.fn(async () => contribution);
     const updateContributionStatus = vi.fn(async () => undefined);
@@ -87,6 +95,7 @@ describe('Ozow webhook integration', () => {
     };
 
     mockRateLimit(true);
+    mockCache();
 
     const getContributionByPaymentRef = vi.fn(async () => contribution);
     const updateContributionStatus = vi.fn(async () => undefined);
@@ -128,6 +137,7 @@ describe('Ozow webhook integration', () => {
 
   it('rejects requests when rate limited', async () => {
     mockRateLimit(false);
+    mockCache();
 
     const { POST } = await loadHandler();
     const response = await POST(

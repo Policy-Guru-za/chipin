@@ -16,6 +16,12 @@ const mockRateLimit = (allowed: boolean) => {
   }));
 };
 
+const mockCache = () => {
+  vi.doMock('@/lib/dream-boards/cache', () => ({
+    invalidateDreamBoardCacheById: vi.fn(async () => undefined),
+  }));
+};
+
 const originalEnv = {
   SNAPSCAN_WEBHOOK_AUTH_KEY: process.env.SNAPSCAN_WEBHOOK_AUTH_KEY,
 };
@@ -23,6 +29,7 @@ const originalEnv = {
 afterEach(() => {
   process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = originalEnv.SNAPSCAN_WEBHOOK_AUTH_KEY;
   vi.unmock('@/lib/auth/rate-limit');
+  vi.unmock('@/lib/dream-boards/cache');
   vi.unmock('@/lib/db/queries');
   vi.clearAllMocks();
   vi.resetModules();
@@ -32,6 +39,7 @@ describe('SnapScan webhook integration - success', () => {
   it('accepts a valid webhook payload', async () => {
     process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = 'snap-secret';
     mockRateLimit(true);
+    mockCache();
 
     const contribution = {
       id: 'contrib-1',
@@ -87,10 +95,11 @@ describe('SnapScan webhook integration - success', () => {
   });
 });
 
-describe('SnapScan webhook integration - errors', () => {
+describe('SnapScan webhook integration - validation', () => {
   it('rejects payloads without amounts', async () => {
     process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = 'snap-secret';
     mockRateLimit(true);
+    mockCache();
 
     const contribution = {
       id: 'contrib-1',
@@ -140,42 +149,10 @@ describe('SnapScan webhook integration - errors', () => {
     expect(markDreamBoardFundedIfNeeded).not.toHaveBeenCalled();
   });
 
-  it('rejects requests when rate limited', async () => {
-    process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = 'snap-secret';
-    mockRateLimit(false);
-
-    const payload = {
-      id: 'SNAP-123',
-      status: 'COMPLETED',
-      amount: 5250,
-      timestamp: new Date().toISOString(),
-    };
-    const rawBody = new URLSearchParams({
-      payload: JSON.stringify(payload),
-    }).toString();
-    const signature = crypto
-      .createHmac('sha256', process.env.SNAPSCAN_WEBHOOK_AUTH_KEY)
-      .update(rawBody)
-      .digest('hex');
-
-    const { POST } = await loadHandler();
-    const response = await POST(
-      new Request('http://localhost/api/webhooks/snapscan', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-          authorization: `SnapScan signature=${signature}`,
-        },
-        body: rawBody,
-      })
-    );
-
-    expect(response.status).toBe(429);
-  });
-
   it('accepts payloads without a timestamp', async () => {
     process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = 'snap-secret';
     mockRateLimit(true);
+    mockCache();
 
     const contribution = {
       id: 'contrib-1',
@@ -221,5 +198,41 @@ describe('SnapScan webhook integration - errors', () => {
     );
 
     expect(response.status).toBe(200);
+  });
+});
+
+describe('SnapScan webhook integration - rate limiting', () => {
+  it('rejects requests when rate limited', async () => {
+    process.env.SNAPSCAN_WEBHOOK_AUTH_KEY = 'snap-secret';
+    mockRateLimit(false);
+    mockCache();
+
+    const payload = {
+      id: 'SNAP-123',
+      status: 'COMPLETED',
+      amount: 5250,
+      timestamp: new Date().toISOString(),
+    };
+    const rawBody = new URLSearchParams({
+      payload: JSON.stringify(payload),
+    }).toString();
+    const signature = crypto
+      .createHmac('sha256', process.env.SNAPSCAN_WEBHOOK_AUTH_KEY)
+      .update(rawBody)
+      .digest('hex');
+
+    const { POST } = await loadHandler();
+    const response = await POST(
+      new Request('http://localhost/api/webhooks/snapscan', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          authorization: `SnapScan signature=${signature}`,
+        },
+        body: rawBody,
+      })
+    );
+
+    expect(response.status).toBe(429);
   });
 });

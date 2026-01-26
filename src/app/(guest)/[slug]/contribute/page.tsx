@@ -5,13 +5,13 @@ import { cache } from 'react';
 import { DreamBoardCard } from '@/components/dream-board/DreamBoardCard';
 import { ContributionForm } from '@/components/forms/ContributionForm';
 import { StateCard } from '@/components/ui/state-card';
-import { getDreamBoardBySlug } from '@/lib/db/queries';
+import { getCachedDreamBoardBySlug } from '@/lib/dream-boards/cache';
 import { buildDreamBoardMetadata } from '@/lib/dream-boards/metadata';
 import { buildContributionViewModel } from '@/lib/dream-boards/view-model';
 import { getAvailablePaymentProviders } from '@/lib/payments';
 import { uiCopy } from '@/lib/ui/copy';
 
-const getBoard = cache(async (slug: string) => getDreamBoardBySlug(slug));
+const getBoard = cache(async (slug: string) => getCachedDreamBoardBySlug(slug));
 
 export async function generateMetadata({
   params,

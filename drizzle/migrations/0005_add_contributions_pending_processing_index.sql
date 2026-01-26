@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "idx_contributions_pending_processing" ON "contributions" USING btree ("payment_status","created_at") WHERE "contributions"."payment_status" IN ('pending', 'processing');
