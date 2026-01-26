@@ -5,6 +5,7 @@ import { recordAuditEvent } from '@/lib/audit';
 import { requireInternalAuth, getInternalActor } from '@/lib/api/internal-auth';
 import { buildApiKeyRecord, generateApiKeyToken, resolveRateLimit } from '@/lib/api/keys';
 import { createApiKeyRecord } from '@/lib/db/api-key-queries';
+import { DEFAULT_PARTNER_ID } from '@/lib/db/partners';
 
 const scopeSchema = z.enum([
   'dreamboards:read',
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
   const { keyHash, keyPrefix } = buildApiKeyRecord({ token });
 
   const created = await createApiKeyRecord({
+    partnerId: DEFAULT_PARTNER_ID,
     partnerName: parsed.data.partner_name,
     scopes: parsed.data.scopes,
     rateLimit,

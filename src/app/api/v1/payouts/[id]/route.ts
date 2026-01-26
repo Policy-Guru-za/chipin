@@ -17,7 +17,7 @@ export const GET = withApiAuth(
     });
     if (!idCheck.ok) return idCheck.response;
 
-    const payout = await getPayoutForApi(params.id);
+    const payout = await getPayoutForApi({ id: params.id, partnerId: context.apiKey.partnerId });
     if (!payout) {
       return jsonError({
         error: { code: 'not_found', message: 'Payout not found' },

@@ -31,6 +31,7 @@ export const GET = withApiAuth('payouts:read', async (request: NextRequest, cont
 
   const limit = parsedQuery.data.limit ?? 20;
   const rows = await listPendingPayoutsForApi({
+    partnerId: context.apiKey.partnerId,
     type: parsedQuery.data.type,
     limit: limit + 1,
     cursor: cursorResult.cursor,

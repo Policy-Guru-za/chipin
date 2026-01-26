@@ -16,7 +16,7 @@ const mockAuth = () => {
       ok: true,
       context: {
         requestId: 'req-4',
-        apiKey: { id: 'api-key-4', rateLimit: 1000 },
+        apiKey: { id: 'api-key-4', partnerId: 'partner-1', rateLimit: 1000 },
         rateLimitHeaders: new Headers(),
       },
     })),

@@ -31,6 +31,7 @@ describe('POST /api/internal/api-keys', () => {
   it('creates an api key', async () => {
     const createApiKeyRecord = vi.fn(async () => ({
       id: 'key-1',
+      partnerId: 'partner-1',
       partnerName: 'Partner',
       scopes: ['dreamboards:read'],
       rateLimit: 1000,
@@ -69,6 +70,7 @@ describe('POST /api/internal/api-keys/[id]/rotate', () => {
   it('rotates an api key', async () => {
     const getApiKeyById = vi.fn(async () => ({
       id: 'key-1',
+      partnerId: 'partner-1',
       partnerName: 'Partner',
       scopes: ['dreamboards:read'],
       rateLimit: 1000,
@@ -78,6 +80,7 @@ describe('POST /api/internal/api-keys/[id]/rotate', () => {
     }));
     const createApiKeyRecord = vi.fn(async () => ({
       id: 'key-2',
+      partnerId: 'partner-1',
       partnerName: 'Partner',
       scopes: ['dreamboards:read'],
       rateLimit: 1000,
@@ -122,6 +125,7 @@ describe('DELETE /api/internal/api-keys/[id]', () => {
   it('revokes an api key', async () => {
     const getApiKeyById = vi.fn(async () => ({
       id: 'key-1',
+      partnerId: 'partner-1',
       partnerName: 'Partner',
       scopes: ['dreamboards:read'],
       rateLimit: 1000,

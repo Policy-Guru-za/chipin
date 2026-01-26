@@ -37,6 +37,7 @@ describe('requireApiKey', () => {
   it('rejects when scope is missing', async () => {
     const getApiKeyByHash = vi.fn(async () => ({
       id: 'api-key-1',
+      partnerId: 'partner-1',
       partnerName: 'Partner',
       scopes: ['contributions:read'],
       rateLimit: 1000,
@@ -58,6 +59,7 @@ describe('requireApiKey', () => {
   it('accepts normalized dream board scope', async () => {
     const getApiKeyByHash = vi.fn(async () => ({
       id: 'api-key-2',
+      partnerId: 'partner-1',
       partnerName: 'Partner',
       scopes: ['dream_boards:read'],
       rateLimit: 1000,

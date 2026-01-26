@@ -8,6 +8,7 @@ const loadModule = async () => {
 
 const mockApiKey = (rateLimit: number) => ({
   id: 'api-key-1',
+  partnerId: 'partner-1',
   partnerName: 'Partner',
   scopes: ['dreamboards:read'],
   rateLimit,

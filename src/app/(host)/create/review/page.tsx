@@ -12,6 +12,7 @@ import { buildCreateFlowViewModel } from '@/lib/host/create-view-model';
 import { generateSlug } from '@/lib/utils/slug';
 import { db } from '@/lib/db';
 import { dreamBoards } from '@/lib/db/schema';
+import { DEFAULT_PARTNER_ID } from '@/lib/db/partners';
 
 async function createDreamBoardAction() {
   'use server';
@@ -28,6 +29,7 @@ async function createDreamBoardAction() {
   const [created] = await db
     .insert(dreamBoards)
     .values({
+      partnerId: DEFAULT_PARTNER_ID,
       hostId: session.hostId,
       slug,
       childName: parsed.data.childName,

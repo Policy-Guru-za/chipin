@@ -7,10 +7,12 @@ import {
   contributions,
   dreamBoards,
   hosts,
+  partners,
   payoutItems,
   payouts,
   webhookEvents,
 } from './schema';
+import { DEFAULT_PARTNER_ID, DEFAULT_PARTNER_NAME } from './partners';
 
 export async function seedDatabase() {
   await db.delete(webhookEvents);
@@ -21,6 +23,12 @@ export async function seedDatabase() {
   await db.delete(contributions);
   await db.delete(dreamBoards);
   await db.delete(hosts);
+  await db.delete(partners);
+
+  await db.insert(partners).values({
+    id: DEFAULT_PARTNER_ID,
+    name: DEFAULT_PARTNER_NAME,
+  });
 
   const [host] = await db
     .insert(hosts)
@@ -37,6 +45,7 @@ export async function seedDatabase() {
   const [dreamBoard] = await db
     .insert(dreamBoards)
     .values({
+      partnerId: DEFAULT_PARTNER_ID,
       hostId: host.id,
       slug: 'maya-birthday-demo',
       childName: 'Maya',
@@ -65,6 +74,7 @@ export async function seedDatabase() {
     .returning({ id: dreamBoards.id });
 
   await db.insert(contributions).values({
+    partnerId: DEFAULT_PARTNER_ID,
     dreamBoardId: dreamBoard.id,
     contributorName: 'Ava',
     message: 'Happy birthday, Maya!',
@@ -78,6 +88,7 @@ export async function seedDatabase() {
   const [payout] = await db
     .insert(payouts)
     .values({
+      partnerId: DEFAULT_PARTNER_ID,
       dreamBoardId: dreamBoard.id,
       type: 'takealot_gift_card',
       grossCents: 5000,
@@ -102,6 +113,7 @@ export async function seedDatabase() {
   const [apiKey] = await db
     .insert(apiKeys)
     .values({
+      partnerId: DEFAULT_PARTNER_ID,
       partnerName: 'Demo Partner',
       keyHash: createHash('sha256')
         .update('cpk_test_0123456789abcdef0123456789abcdef')

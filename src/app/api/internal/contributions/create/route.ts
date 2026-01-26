@@ -51,6 +51,7 @@ const fetchDreamBoard = async (dreamBoardId: string) => {
   const [board] = await db
     .select({
       id: dreamBoards.id,
+      partnerId: dreamBoards.partnerId,
       slug: dreamBoards.slug,
       childName: dreamBoards.childName,
       status: dreamBoards.status,
@@ -94,6 +95,7 @@ const buildContributionPayload = (params: {
 
   return {
     contribution: {
+      partnerId: params.board.partnerId,
       dreamBoardId: params.board.id,
       contributorName,
       message,

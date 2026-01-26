@@ -1,0 +1,51 @@
+name: Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployed_sha:
+        description: Commit SHA that is already deployed
+        required: true
+      confirm_deployed:
+        description: Type DEPLOYED to confirm code is live
+        required: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Verify deployment confirmation
+        run: |
+          if [ "${{ inputs.confirm_deployed }}" != "DEPLOYED" ]; then
+            echo "confirm_deployed must be DEPLOYED"
+            exit 1
+          fi
+
+      - name: Verify deployed SHA matches workflow SHA
+        run: |
+          if [ "${{ inputs.deployed_sha }}" != "${{ github.sha }}" ]; then
+            echo "deployed_sha must match the workflow SHA (${GITHUB_SHA})"
+            exit 1
+          fi
+
+      - name: Enable Corepack
+        run: corepack enable && corepack prepare pnpm@10.14.0 --activate
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run migrations
+        run: pnpm drizzle:push

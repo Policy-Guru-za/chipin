@@ -17,7 +17,7 @@ export const GET = withApiAuth(
     });
     if (!idCheck.ok) return idCheck.response;
 
-    const board = await getDreamBoardByPublicId(params.id);
+    const board = await getDreamBoardByPublicId(params.id, context.apiKey.partnerId);
     if (!board) {
       return jsonError({
         error: { code: 'not_found', message: 'Dream board not found' },

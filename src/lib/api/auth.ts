@@ -12,6 +12,7 @@ export type ApiKeyScope =
 
 export type ApiKeyRecord = {
   id: string;
+  partnerId: string;
   partnerName: string;
   scopes: string[];
   rateLimit: number;

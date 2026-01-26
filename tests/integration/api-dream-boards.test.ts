@@ -90,7 +90,7 @@ describe('GET /api/v1/dream-boards/[id] responses - missing', () => {
       ok: true,
       context: {
         requestId: 'req-1',
-        apiKey: { id: 'api-key-1', rateLimit: 1000 },
+        apiKey: { id: 'api-key-1', partnerId: 'partner-1', rateLimit: 1000 },
         rateLimitHeaders: new Headers(),
       },
     });
@@ -109,6 +109,33 @@ describe('GET /api/v1/dream-boards/[id] responses - missing', () => {
     expect(response.status).toBe(404);
     expect(payload.error.code).toBe('not_found');
   });
+
+  it('returns not found when dream board belongs to another partner', async () => {
+    mockAuth({
+      ok: true,
+      context: {
+        requestId: 'req-tenant',
+        apiKey: { id: 'api-key-tenant', partnerId: 'partner-a', rateLimit: 1000 },
+        rateLimitHeaders: new Headers(),
+      },
+    });
+
+    const getDreamBoardByPublicId = vi.fn(async () => null);
+    vi.doMock('@/lib/db/queries', () => ({
+      getDreamBoardByPublicId,
+      markApiKeyUsed: vi.fn(async () => undefined),
+    }));
+
+    const { GET } = await loadHandler();
+    const response = await GET(new Request('http://localhost/api/v1/dream-boards/board-b'), {
+      params: { id: 'board-b' },
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload.error.code).toBe('not_found');
+    expect(getDreamBoardByPublicId).toHaveBeenCalledWith('board-b', 'partner-a');
+  });
 });
 
 describe('GET /api/v1/dream-boards/[id] responses - validation', () => {
@@ -117,7 +144,7 @@ describe('GET /api/v1/dream-boards/[id] responses - validation', () => {
       ok: true,
       context: {
         requestId: 'req-2',
-        apiKey: { id: 'api-key-1', rateLimit: 1000 },
+        apiKey: { id: 'api-key-1', partnerId: 'partner-1', rateLimit: 1000 },
         rateLimitHeaders: new Headers(),
       },
     });
@@ -146,7 +173,7 @@ describe('GET /api/v1/dream-boards/[id] responses - payloads', () => {
       ok: true,
       context: {
         requestId: 'req-123',
-        apiKey: { id: 'api-key-2', rateLimit: 1000 },
+        apiKey: { id: 'api-key-2', partnerId: 'partner-1', rateLimit: 1000 },
         rateLimitHeaders: new Headers(),
       },
     });
@@ -177,7 +204,7 @@ describe('GET /api/v1/dream-boards/[id] responses - payloads', () => {
       ok: true,
       context: {
         requestId: 'req-5',
-        apiKey: { id: 'api-key-5', rateLimit: 1000 },
+        apiKey: { id: 'api-key-5', partnerId: 'partner-1', rateLimit: 1000 },
         rateLimitHeaders: new Headers(),
       },
     });
@@ -210,7 +237,7 @@ describe('GET /api/v1/dream-boards/[id] responses - payloads', () => {
       ok: true,
       context: {
         requestId: 'req-4',
-        apiKey: { id: 'api-key-4', rateLimit: 1000 },
+        apiKey: { id: 'api-key-4', partnerId: 'partner-1', rateLimit: 1000 },
         rateLimitHeaders: new Headers(),
       },
     });

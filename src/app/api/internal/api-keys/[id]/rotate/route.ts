@@ -61,6 +61,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const { keyHash, keyPrefix } = buildApiKeyRecord({ token });
 
   const created = await createApiKeyRecord({
+    partnerId: existing.partnerId,
     partnerName: existing.partnerName,
     scopes: parsed.data.scopes ?? existing.scopes,
     rateLimit,

@@ -41,6 +41,19 @@ export const POST = withApiAuth(
       });
     }
 
+    const existing = await getPayoutForApi({
+      id: params.id,
+      partnerId: apiKey.partnerId,
+    });
+    if (!existing) {
+      return jsonError({
+        error: { code: 'not_found', message: 'Payout not found' },
+        status: 404,
+        requestId,
+        headers: rateLimitHeaders,
+      });
+    }
+
     try {
       await completePayout({
         payoutId: params.id,
@@ -66,7 +79,7 @@ export const POST = withApiAuth(
       });
     }
 
-    const payout = await getPayoutForApi(params.id);
+    const payout = await getPayoutForApi({ id: params.id, partnerId: apiKey.partnerId });
     if (!payout) {
       return jsonError({
         error: { code: 'not_found', message: 'Payout not found' },

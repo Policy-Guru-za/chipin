@@ -11,7 +11,7 @@ const mockAuth = () => {
       ok: true,
       context: {
         requestId: 'req-1',
-        apiKey: { id: 'api-key-1', rateLimit: 1000 },
+        apiKey: { id: 'api-key-1', partnerId: 'partner-1', rateLimit: 1000 },
         rateLimitHeaders: new Headers(),
       },
     })),
@@ -81,7 +81,31 @@ describe('GET /api/v1/dream-boards', () => {
     expect(payload.data).toHaveLength(1);
     expect(payload.pagination.has_more).toBe(true);
     expect(payload.pagination.next_cursor).toBeTruthy();
+    expect(listDreamBoardsForApi).toHaveBeenCalledWith(
+      expect.objectContaining({ partnerId: 'partner-1' })
+    );
     expect(markApiKeyUsed).toHaveBeenCalledWith('api-key-1');
+  });
+
+  it('rejects invalid cursors', async () => {
+    mockAuth();
+
+    const listDreamBoardsForApi = vi.fn(async () => []);
+    const markApiKeyUsed = vi.fn(async () => undefined);
+
+    vi.doMock('@/lib/db/api-queries', () => ({ listDreamBoardsForApi }));
+    vi.doMock('@/lib/db/queries', () => ({ markApiKeyUsed }));
+
+    const { GET } = await loadHandler();
+    const response = await GET(
+      new Request('http://localhost/api/v1/dream-boards?after=not-a-cursor')
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error.code).toBe('validation_error');
+    expect(listDreamBoardsForApi).not.toHaveBeenCalled();
+    expect(markApiKeyUsed).not.toHaveBeenCalled();
   });
 });
 

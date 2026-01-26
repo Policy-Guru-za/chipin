@@ -75,10 +75,25 @@ export const hosts = pgTable(
   })
 );
 
+export const partners = pgTable(
+  'partners',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 100 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    nameIdx: uniqueIndex('unique_partners_name').on(table.name),
+  })
+);
+
 export const dreamBoards = pgTable(
   'dream_boards',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .notNull()
+      .references(() => partners.id, { onDelete: 'restrict' }),
     hostId: uuid('host_id')
       .notNull()
       .references(() => hosts.id, { onDelete: 'cascade' }),
@@ -101,6 +116,7 @@ export const dreamBoards = pgTable(
   },
   (table) => ({
     hostIdx: index('idx_dream_boards_host').on(table.hostId),
+    partnerIdx: index('idx_dream_boards_partner').on(table.partnerId),
     slugIdx: index('idx_dream_boards_slug').on(table.slug),
     statusIdx: index('idx_dream_boards_status').on(table.status),
     deadlineIdx: index('idx_dream_boards_deadline')
@@ -135,6 +151,9 @@ export const contributions = pgTable(
   'contributions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .notNull()
+      .references(() => partners.id, { onDelete: 'restrict' }),
     dreamBoardId: uuid('dream_board_id')
       .notNull()
       .references(() => dreamBoards.id, { onDelete: 'cascade' }),
@@ -153,6 +172,7 @@ export const contributions = pgTable(
   },
   (table) => ({
     dreamBoardIdx: index('idx_contributions_dream_board').on(table.dreamBoardId),
+    partnerIdx: index('idx_contributions_partner').on(table.partnerId),
     statusIdx: index('idx_contributions_status').on(table.paymentStatus),
     paymentRefIdx: index('idx_contributions_payment_ref').on(
       table.paymentProvider,
@@ -167,6 +187,9 @@ export const payouts = pgTable(
   'payouts',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .notNull()
+      .references(() => partners.id, { onDelete: 'restrict' }),
     dreamBoardId: uuid('dream_board_id')
       .notNull()
       .references(() => dreamBoards.id),
@@ -184,6 +207,7 @@ export const payouts = pgTable(
   (table) => ({
     statusIdx: index('idx_payouts_status').on(table.status),
     dreamBoardIdx: index('idx_payouts_dream_board').on(table.dreamBoardId),
+    partnerIdx: index('idx_payouts_partner').on(table.partnerId),
     uniqueDreamBoardType: uniqueIndex('unique_payout_dream_board_type').on(
       table.dreamBoardId,
       table.type
@@ -244,6 +268,9 @@ export const apiKeys = pgTable(
   'api_keys',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .notNull()
+      .references(() => partners.id, { onDelete: 'restrict' }),
     partnerName: varchar('partner_name', { length: 100 }).notNull(),
     keyHash: varchar('key_hash', { length: 255 }).notNull(),
     keyPrefix: varchar('key_prefix', { length: 12 }).notNull(),
@@ -258,6 +285,7 @@ export const apiKeys = pgTable(
   },
   (table) => ({
     prefixIdx: index('idx_api_keys_prefix').on(table.keyPrefix),
+    partnerIdx: index('idx_api_keys_partner').on(table.partnerId),
     activeIdx: index('idx_api_keys_active')
       .on(table.isActive)
       .where(sql`${table.isActive} = true`),

@@ -7,6 +7,7 @@ export const getApiKeyById = async (id: string) => {
   const [apiKey] = await db
     .select({
       id: apiKeys.id,
+      partnerId: apiKeys.partnerId,
       partnerName: apiKeys.partnerName,
       scopes: apiKeys.scopes,
       rateLimit: apiKeys.rateLimit,
@@ -22,6 +23,7 @@ export const getApiKeyById = async (id: string) => {
 };
 
 export const createApiKeyRecord = async (params: {
+  partnerId: string;
   partnerName: string;
   scopes: string[];
   rateLimit: number;
@@ -31,6 +33,7 @@ export const createApiKeyRecord = async (params: {
   const [created] = await db
     .insert(apiKeys)
     .values({
+      partnerId: params.partnerId,
       partnerName: params.partnerName,
       scopes: params.scopes,
       rateLimit: params.rateLimit,
@@ -39,6 +42,7 @@ export const createApiKeyRecord = async (params: {
     })
     .returning({
       id: apiKeys.id,
+      partnerId: apiKeys.partnerId,
       partnerName: apiKeys.partnerName,
       scopes: apiKeys.scopes,
       rateLimit: apiKeys.rateLimit,

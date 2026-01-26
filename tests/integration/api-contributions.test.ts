@@ -16,7 +16,7 @@ const mockAuth = () => {
       ok: true,
       context: {
         requestId: 'req-2',
-        apiKey: { id: 'api-key-2', rateLimit: 1000 },
+        apiKey: { id: 'api-key-2', partnerId: 'partner-1', rateLimit: 1000 },
         rateLimitHeaders: new Headers(),
       },
     })),
@@ -74,6 +74,9 @@ describe('GET /api/v1/dream-boards/[id]/contributions', () => {
     expect(response.status).toBe(200);
     expect(payload.data).toHaveLength(1);
     expect(payload.pagination.has_more).toBe(true);
+    expect(listContributionsForApi).toHaveBeenCalledWith(
+      expect.objectContaining({ partnerId: 'partner-1', dreamBoardId: 'board-1' })
+    );
     expect(markApiKeyUsed).toHaveBeenCalledWith('api-key-2');
   });
 });
@@ -96,5 +99,29 @@ describe('GET /api/v1/contributions/[id]', () => {
 
     expect(response.status).toBe(400);
     expect(payload.error.code).toBe('validation_error');
+  });
+
+  it('returns not found when contribution belongs to another partner', async () => {
+    mockAuth();
+
+    const getContributionForApi = vi.fn(async () => null);
+    const markApiKeyUsed = vi.fn(async () => undefined);
+
+    vi.doMock('@/lib/db/api-queries', () => ({ getContributionForApi }));
+    vi.doMock('@/lib/db/queries', () => ({ markApiKeyUsed }));
+
+    const { GET } = await loadGetHandler();
+    const id = '00000000-0000-4000-8000-000000000000';
+    const response = await GET(new Request(`http://localhost/api/v1/contributions/${id}`), {
+      params: { id },
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload.error.code).toBe('not_found');
+    expect(getContributionForApi).toHaveBeenCalledWith({
+      id,
+      partnerId: 'partner-1',
+    });
   });
 });

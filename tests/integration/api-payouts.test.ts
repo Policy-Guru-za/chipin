@@ -26,7 +26,12 @@ const mockAuth = () => {
       ok: true,
       context: {
         requestId: 'req-3',
-        apiKey: { id: 'api-key-3', rateLimit: 1000, partnerName: 'Partner' },
+        apiKey: {
+          id: 'api-key-3',
+          partnerId: 'partner-1',
+          rateLimit: 1000,
+          partnerName: 'Partner',
+        },
         rateLimitHeaders: new Headers(),
       },
     })),
@@ -87,6 +92,9 @@ describe('GET /api/v1/payouts/pending', () => {
     expect(response.status).toBe(200);
     expect(payload.data).toHaveLength(1);
     expect(payload.pagination.has_more).toBe(true);
+    expect(listPendingPayoutsForApi).toHaveBeenCalledWith(
+      expect.objectContaining({ partnerId: 'partner-1' })
+    );
     expect(markApiKeyUsed).toHaveBeenCalledWith('api-key-3');
   });
 });
@@ -130,6 +138,34 @@ describe('POST /api/v1/payouts/[id]/confirm', () => {
     expect(payload.data.external_ref).toBe('TKL_123');
     expect(markApiKeyUsed).toHaveBeenCalledWith('api-key-3');
   });
+
+  it('returns not found when payout belongs to another partner', async () => {
+    mockAuth();
+
+    const completePayout = vi.fn(async () => undefined);
+    const getPayoutForApi = vi.fn(async () => null);
+    const markApiKeyUsed = vi.fn(async () => undefined);
+
+    vi.doMock('@/lib/payouts/service', () => ({ completePayout }));
+    vi.doMock('@/lib/db/api-queries', () => ({ getPayoutForApi }));
+    vi.doMock('@/lib/db/queries', () => ({ markApiKeyUsed }));
+
+    const { POST } = await loadConfirmHandler();
+    const id = '00000000-0000-4000-8000-000000000000';
+    const response = await POST(
+      new Request(`http://localhost/api/v1/payouts/${id}/confirm`, {
+        method: 'POST',
+        body: JSON.stringify({ external_ref: 'TKL_123' }),
+      }),
+      { params: { id } }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload.error.code).toBe('not_found');
+    expect(completePayout).not.toHaveBeenCalled();
+    expect(getPayoutForApi).toHaveBeenCalledWith({ id, partnerId: 'partner-1' });
+  });
 });
 
 describe('GET /api/v1/payouts/[id]', () => {
@@ -165,6 +201,26 @@ describe('GET /api/v1/payouts/[id]', () => {
     expect(response.status).toBe(200);
     expect(payload.data.id).toBe('00000000-0000-4000-8000-000000000000');
     expect(markApiKeyUsed).toHaveBeenCalledWith('api-key-3');
+  });
+
+  it('rejects invalid payout identifiers', async () => {
+    mockAuth();
+
+    const getPayoutForApi = vi.fn(async () => null);
+    const markApiKeyUsed = vi.fn(async () => undefined);
+
+    vi.doMock('@/lib/db/api-queries', () => ({ getPayoutForApi }));
+    vi.doMock('@/lib/db/queries', () => ({ markApiKeyUsed }));
+
+    const { GET } = await loadGetHandler();
+    const response = await GET(new Request('http://localhost/api/v1/payouts/bad-id'), {
+      params: { id: 'bad-id' },
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error.code).toBe('validation_error');
+    expect(getPayoutForApi).not.toHaveBeenCalled();
   });
 });
 
@@ -206,5 +262,61 @@ describe('POST /api/v1/payouts/[id]/fail', () => {
     expect(response.status).toBe(200);
     expect(payload.data.status).toBe('failed');
     expect(markApiKeyUsed).toHaveBeenCalledWith('api-key-3');
+  });
+
+  it('returns not found when failing payout for another partner', async () => {
+    mockAuth();
+
+    const failPayout = vi.fn(async () => undefined);
+    const getPayoutForApi = vi.fn(async () => null);
+    const markApiKeyUsed = vi.fn(async () => undefined);
+
+    vi.doMock('@/lib/payouts/service', () => ({ failPayout }));
+    vi.doMock('@/lib/db/api-queries', () => ({ getPayoutForApi }));
+    vi.doMock('@/lib/db/queries', () => ({ markApiKeyUsed }));
+
+    const { POST } = await loadFailHandler();
+    const id = '00000000-0000-4000-8000-000000000000';
+    const response = await POST(
+      new Request(`http://localhost/api/v1/payouts/${id}/fail`, {
+        method: 'POST',
+        body: JSON.stringify({ error_message: 'declined' }),
+      }),
+      { params: { id } }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload.error.code).toBe('not_found');
+    expect(failPayout).not.toHaveBeenCalled();
+    expect(getPayoutForApi).toHaveBeenCalledWith({ id, partnerId: 'partner-1' });
+  });
+
+  it('rejects malformed JSON payloads', async () => {
+    mockAuth();
+
+    const failPayout = vi.fn(async () => undefined);
+    const getPayoutForApi = vi.fn(async () => null);
+    const markApiKeyUsed = vi.fn(async () => undefined);
+
+    vi.doMock('@/lib/payouts/service', () => ({ failPayout }));
+    vi.doMock('@/lib/db/api-queries', () => ({ getPayoutForApi }));
+    vi.doMock('@/lib/db/queries', () => ({ markApiKeyUsed }));
+
+    const { POST } = await loadFailHandler();
+    const response = await POST(
+      new Request('http://localhost/api/v1/payouts/00000000-0000-4000-8000-000000000000/fail', {
+        method: 'POST',
+        body: '{bad-json',
+        headers: { 'content-type': 'application/json' },
+      }),
+      { params: { id: '00000000-0000-4000-8000-000000000000' } }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error.code).toBe('validation_error');
+    expect(getPayoutForApi).not.toHaveBeenCalled();
+    expect(failPayout).not.toHaveBeenCalled();
   });
 });

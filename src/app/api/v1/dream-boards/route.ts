@@ -236,6 +236,7 @@ const insertDreamBoard = async (params: {
   overflowGiftData?: { causeId: string; causeName: string; impactDescription: string };
   hostId: string;
   karriCardNumber: string | null;
+  partnerId: string;
 }) => {
   let created: null | { id: string; slug: string; createdAt: Date; updatedAt: Date } = null;
   for (let attempt = 0; attempt < 3 && !created; attempt += 1) {
@@ -243,6 +244,7 @@ const insertDreamBoard = async (params: {
     const [result] = await db
       .insert(dreamBoards)
       .values({
+        partnerId: params.partnerId,
         hostId: params.hostId,
         slug,
         childName: params.payload.child_name,
@@ -293,6 +295,7 @@ export const GET = withApiAuth('dreamboards:read', async (request: NextRequest, 
 
   const limit = parsed.data.limit ?? 20;
   const rows = await listDreamBoardsForApi({
+    partnerId: context.apiKey.partnerId,
     status: parsed.data.status,
     limit: limit + 1,
     cursor: cursorResult.cursor,
@@ -363,6 +366,7 @@ export const POST = withApiAuth('dreamboards:write', async (request: NextRequest
     overflowGiftData: giftDataResult.overflowGiftData,
     hostId: host.id,
     karriCardNumber,
+    partnerId: context.apiKey.partnerId,
   });
 
   if (!created) {

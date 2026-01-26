@@ -45,11 +45,12 @@ const applyCursor = (params: {
 };
 
 export const listDreamBoardsForApi = async (params: {
+  partnerId: string;
   status?: string;
   limit: number;
   cursor?: PaginationCursor | null;
 }) => {
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [eq(dreamBoards.partnerId, params.partnerId)];
   if (params.status) {
     conditions.push(eq(dreamBoards.status, params.status as DreamBoardStatus));
   }
@@ -81,12 +82,16 @@ export const listDreamBoardsForApi = async (params: {
 };
 
 export const listContributionsForApi = async (params: {
+  partnerId: string;
   dreamBoardId: string;
   status?: string;
   limit: number;
   cursor?: PaginationCursor | null;
 }) => {
-  const conditions: SQL[] = [eq(contributions.dreamBoardId, params.dreamBoardId)];
+  const conditions: SQL[] = [
+    eq(contributions.partnerId, params.partnerId),
+    eq(contributions.dreamBoardId, params.dreamBoardId),
+  ];
   if (params.status) {
     conditions.push(eq(contributions.paymentStatus, params.status as ContributionStatus));
   }
@@ -118,7 +123,7 @@ export const listContributionsForApi = async (params: {
     .limit(params.limit);
 };
 
-export const getContributionForApi = async (id: string) => {
+export const getContributionForApi = async (params: { id: string; partnerId: string }) => {
   const [contribution] = await db
     .select({
       id: contributions.id,
@@ -132,18 +137,22 @@ export const getContributionForApi = async (id: string) => {
       createdAt: contributions.createdAt,
     })
     .from(contributions)
-    .where(eq(contributions.id, id))
+    .where(and(eq(contributions.id, params.id), eq(contributions.partnerId, params.partnerId)))
     .limit(1);
 
   return contribution ?? null;
 };
 
 export const listPendingPayoutsForApi = async (params: {
+  partnerId: string;
   type?: string;
   limit: number;
   cursor?: PaginationCursor | null;
 }) => {
-  const conditions: SQL[] = [eq(payouts.status, 'pending')];
+  const conditions: SQL[] = [
+    eq(payouts.partnerId, params.partnerId),
+    eq(payouts.status, 'pending'),
+  ];
   if (params.type) {
     conditions.push(eq(payouts.type, params.type as PayoutType));
   }
@@ -178,7 +187,7 @@ export const listPendingPayoutsForApi = async (params: {
     .limit(params.limit);
 };
 
-export const getPayoutForApi = async (id: string) => {
+export const getPayoutForApi = async (params: { id: string; partnerId: string }) => {
   const [payout] = await db
     .select({
       id: payouts.id,
@@ -195,7 +204,7 @@ export const getPayoutForApi = async (id: string) => {
       completedAt: payouts.completedAt,
     })
     .from(payouts)
-    .where(eq(payouts.id, id))
+    .where(and(eq(payouts.id, params.id), eq(payouts.partnerId, params.partnerId)))
     .limit(1);
 
   return payout ?? null;

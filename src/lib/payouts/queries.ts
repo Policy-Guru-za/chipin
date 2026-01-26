@@ -7,6 +7,7 @@ export const getDreamBoardPayoutContext = async (dreamBoardId: string) => {
   const [board] = await db
     .select({
       id: dreamBoards.id,
+      partnerId: dreamBoards.partnerId,
       slug: dreamBoards.slug,
       childName: dreamBoards.childName,
       giftType: dreamBoards.giftType,

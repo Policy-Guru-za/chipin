@@ -17,7 +17,10 @@ export const GET = withApiAuth(
     });
     if (!idCheck.ok) return idCheck.response;
 
-    const contribution = await getContributionForApi(params.id);
+    const contribution = await getContributionForApi({
+      id: params.id,
+      partnerId: context.apiKey.partnerId,
+    });
     if (!contribution) {
       return jsonError({
         error: { code: 'not_found', message: 'Contribution not found' },

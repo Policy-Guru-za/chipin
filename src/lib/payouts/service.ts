@@ -183,6 +183,7 @@ export async function createPayoutsForDreamBoard(params: {
         const [created] = await tx
           .insert(payouts)
           .values({
+            partnerId: board.partnerId,
             dreamBoardId: board.id,
             type: plan.type,
             grossCents: plan.amountCents,

@@ -29,6 +29,13 @@
       "when": 1769442166994,
       "tag": "0003_sticky_logan",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769450993510,
+      "tag": "0004_clumsy_dragon_lord",
+      "breakpoints": true
     }
   ]
 }

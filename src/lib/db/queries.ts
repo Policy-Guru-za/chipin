@@ -62,7 +62,7 @@ export async function getDreamBoardById(id: string, hostId: string) {
   return board ?? null;
 }
 
-export async function getDreamBoardBySlug(slug: string) {
+export async function getDreamBoardBySlug(slug: string, partnerId?: string) {
   const [board] = await db
     .select({
       id: dreamBoards.id,
@@ -91,7 +91,11 @@ export async function getDreamBoardBySlug(slug: string) {
         eq(contributions.paymentStatus, 'completed')
       )
     )
-    .where(eq(dreamBoards.slug, slug))
+    .where(
+      partnerId
+        ? and(eq(dreamBoards.slug, slug), eq(dreamBoards.partnerId, partnerId))
+        : eq(dreamBoards.slug, slug)
+    )
     .groupBy(dreamBoards.id)
     .limit(1);
 
@@ -100,9 +104,9 @@ export async function getDreamBoardBySlug(slug: string) {
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export const getDreamBoardByPublicId = async (identifier: string) => {
+export const getDreamBoardByPublicId = async (identifier: string, partnerId?: string) => {
   if (!uuidRegex.test(identifier)) {
-    return getDreamBoardBySlug(identifier);
+    return getDreamBoardBySlug(identifier, partnerId);
   }
 
   const [board] = await db
@@ -133,7 +137,11 @@ export const getDreamBoardByPublicId = async (identifier: string) => {
         eq(contributions.paymentStatus, 'completed')
       )
     )
-    .where(eq(dreamBoards.id, identifier))
+    .where(
+      partnerId
+        ? and(eq(dreamBoards.id, identifier), eq(dreamBoards.partnerId, partnerId))
+        : eq(dreamBoards.id, identifier)
+    )
     .groupBy(dreamBoards.id)
     .limit(1);
 
@@ -276,6 +284,7 @@ export async function getApiKeyByHash(params: { keyPrefix: string; keyHash: stri
   const [apiKey] = await db
     .select({
       id: apiKeys.id,
+      partnerId: apiKeys.partnerId,
       partnerName: apiKeys.partnerName,
       scopes: apiKeys.scopes,
       rateLimit: apiKeys.rateLimit,
