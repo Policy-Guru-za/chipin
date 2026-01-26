@@ -7,7 +7,7 @@ import { ContributionForm } from '@/components/forms/ContributionForm';
 import { StateCard } from '@/components/ui/state-card';
 import { getDreamBoardBySlug } from '@/lib/db/queries';
 import { buildDreamBoardMetadata } from '@/lib/dream-boards/metadata';
-import { buildGuestViewModel } from '@/lib/dream-boards/view-model';
+import { buildContributionViewModel } from '@/lib/dream-boards/view-model';
 import { getAvailablePaymentProviders } from '@/lib/payments';
 import { uiCopy } from '@/lib/ui/copy';
 
@@ -39,7 +39,7 @@ export default async function ContributionPage({ params }: { params: { slug: str
 
   const availableProviders = getAvailablePaymentProviders();
 
-  const view = buildGuestViewModel(board);
+  const view = buildContributionViewModel(board);
 
   if (view.isClosed) {
     return (
@@ -68,28 +68,21 @@ export default async function ContributionPage({ params }: { params: { slug: str
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
           Step 1 of 2
         </p>
-        <h1 className="text-3xl font-display text-text">
-          {view.showCharityOverflow
-            ? `Support ${view.overflowTitle}`
-            : `Contribute to ${board.childName}'s gift`}
-        </h1>
+        <h1 className="text-3xl font-display text-text">{view.headline}</h1>
       </div>
 
       <DreamBoardCard
         imageUrl={view.displayImage}
         title={view.displayTitle}
         subtitle={view.displaySubtitle}
-        tag={view.showCharityOverflow ? 'Charity overflow' : undefined}
+        tag={view.cardTag}
         imagePriority
       />
 
-      {view.showCharityOverflow && view.overflowData ? (
+      {view.overflowNoticeBody ? (
         <div className="rounded-3xl border border-accent/40 bg-accent/10 p-6 text-sm text-text">
-          <p className="font-semibold">Gift fully funded!</p>
-          <p className="mt-2 text-text-muted">
-            Contributions now support {view.overflowData.causeName}:{' '}
-            {view.overflowData.impactDescription}.
-          </p>
+          <p className="font-semibold">{view.overflowNoticeTitle}</p>
+          <p className="mt-2 text-text-muted">{view.overflowNoticeBody}</p>
         </div>
       ) : null}
 
@@ -105,11 +98,7 @@ export default async function ContributionPage({ params }: { params: { slug: str
         dreamBoardId={board.id}
         childName={board.childName}
         giftTitle={view.displayTitle}
-        headline={
-          view.showCharityOverflow
-            ? `Support ${view.overflowTitle}`
-            : `Contribute to ${board.childName}'s gift`
-        }
+        headline={view.headline}
         subtitle={view.displaySubtitle}
         slug={board.slug}
         availableProviders={availableProviders}

@@ -1,9 +1,12 @@
-import type { getDreamBoardBySlug } from '@/lib/db/queries';
+import type { getContributionByPaymentRef, getDreamBoardBySlug } from '@/lib/db/queries';
+
+import { formatZar } from '@/lib/utils/money';
 
 import { getCauseById } from './causes';
 import { getOverflowState } from './overflow';
 
 type DreamBoardRecord = NonNullable<Awaited<ReturnType<typeof getDreamBoardBySlug>>>;
+type ContributionRecord = Awaited<ReturnType<typeof getContributionByPaymentRef>>;
 
 type TakealotGiftData = {
   productName: string;
@@ -51,6 +54,23 @@ export type GuestViewModel = {
   raisedCents: number;
   goalCents: number;
   message: string | null;
+};
+
+export type ContributionViewModel = GuestViewModel & {
+  headline: string;
+  cardTag?: string;
+  overflowNoticeTitle?: string;
+  overflowNoticeBody?: string;
+};
+
+export type ThankYouViewModel = {
+  headline: string;
+  message: string;
+  percentage: number;
+  raisedLabel: string;
+  goalLabel: string;
+  shareHref: string;
+  contributeHref: string;
 };
 
 const getDaysLeftFrom = (deadline: Date, now: Date) => {
@@ -111,6 +131,60 @@ const getDisplayInfo = (params: {
   };
 };
 
+const getContributionHeadline = (view: GuestViewModel) =>
+  view.showCharityOverflow
+    ? `Support ${view.overflowTitle}`
+    : `Contribute to ${view.childName}'s gift`;
+
+const getOverflowNotice = (view: GuestViewModel) => {
+  if (!view.showCharityOverflow || !view.overflowData) return undefined;
+  return `Contributions now support ${view.overflowData.causeName}: ${view.overflowData.impactDescription}.`;
+};
+
+const getThankYouCopy = (params: {
+  board: DreamBoardRecord;
+  contribution?: ContributionRecord | null;
+}) => {
+  const name = params.contribution?.contributorName || 'Friend';
+  const amount = params.contribution?.amountCents
+    ? formatZar(params.contribution.amountCents)
+    : null;
+  const isComplete = params.contribution?.paymentStatus === 'completed';
+
+  const { giftTitle, giftSubtitle } = getGiftInfo(params.board, {});
+  const { overflowData } = getOverflowInfo(params.board);
+  const { showCharityOverflow } = getOverflowState({
+    raisedCents: params.board.raisedCents,
+    goalCents: params.board.goalCents,
+    giftType: params.board.giftType,
+    overflowGiftData: overflowData,
+  });
+
+  const thankYouMessage = (() => {
+    if (!amount || !isComplete) {
+      return 'We’ll update this page once your payment is confirmed.';
+    }
+
+    if (showCharityOverflow && overflowData) {
+      const impact = overflowData.impactDescription ? `: ${overflowData.impactDescription}` : '';
+      return `Your ${amount} contribution is supporting ${overflowData.causeName}${impact}.`;
+    }
+
+    if (params.board.giftType === 'philanthropy') {
+      const impact = giftSubtitle ? `: ${giftSubtitle}` : '';
+      const title = giftTitle || 'this cause';
+      return `Your ${amount} contribution is supporting ${title}${impact}.`;
+    }
+
+    return `Your ${amount} contribution is helping ${params.board.childName} get their dream gift.`;
+  })();
+
+  return {
+    headline: isComplete ? `Thank you, ${name}!` : 'Thanks for your support!',
+    message: thankYouMessage,
+  };
+};
+
 export const buildGuestViewModel = (
   board: DreamBoardRecord,
   options: GuestViewModelOptions = {}
@@ -161,5 +235,39 @@ export const buildGuestViewModel = (
     raisedCents: board.raisedCents,
     goalCents: board.goalCents,
     message: board.message ?? null,
+  };
+};
+
+export const buildContributionViewModel = (board: DreamBoardRecord): ContributionViewModel => {
+  const view = buildGuestViewModel(board);
+  const overflowNoticeBody = getOverflowNotice(view);
+
+  return {
+    ...view,
+    headline: getContributionHeadline(view),
+    cardTag: view.showCharityOverflow ? 'Charity overflow' : undefined,
+    overflowNoticeTitle: overflowNoticeBody ? 'Gift fully funded!' : undefined,
+    overflowNoticeBody,
+  };
+};
+
+export const buildThankYouViewModel = (params: {
+  board: DreamBoardRecord;
+  contribution?: ContributionRecord | null;
+}): ThankYouViewModel => {
+  const { headline, message } = getThankYouCopy(params);
+  const percentage = Math.min(
+    100,
+    Math.round((params.board.raisedCents / params.board.goalCents) * 100)
+  );
+
+  return {
+    headline,
+    message,
+    percentage,
+    raisedLabel: formatZar(params.board.raisedCents),
+    goalLabel: formatZar(params.board.goalCents),
+    shareHref: `/${params.board.slug}`,
+    contributeHref: `/${params.board.slug}/contribute`,
   };
 };

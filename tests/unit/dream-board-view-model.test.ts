@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildGuestViewModel } from '@/lib/dream-boards/view-model';
+import {
+  buildContributionViewModel,
+  buildGuestViewModel,
+  buildThankYouViewModel,
+} from '@/lib/dream-boards/view-model';
 
 type DreamBoardRecord = Parameters<typeof buildGuestViewModel>[0];
 
@@ -83,5 +87,108 @@ describe('buildGuestViewModel', () => {
     expect(view.giftSubtitle).toBe('Plant 10 trees');
     expect(view.displayTitle).toBe('Plant Trees');
     expect(view.showCharityOverflow).toBe(false);
+  });
+});
+
+describe('buildContributionViewModel', () => {
+  it('builds a standard contribution headline', () => {
+    const view = buildContributionViewModel(makeBoard());
+
+    expect(view.headline).toBe("Contribute to Maya's gift");
+    expect(view.cardTag).toBeUndefined();
+    expect(view.overflowNoticeBody).toBeUndefined();
+  });
+
+  it('builds overflow contribution copy when funded', () => {
+    const view = buildContributionViewModel(makeBoard({ raisedCents: 7000 }));
+
+    expect(view.headline).toBe('Support Feed Hungry Children');
+    expect(view.cardTag).toBe('Charity overflow');
+    expect(view.overflowNoticeTitle).toBe('Gift fully funded!');
+    expect(view.overflowNoticeBody).toBe(
+      'Contributions now support Feed Hungry Children: Feed a class.'
+    );
+  });
+});
+
+describe('buildThankYouViewModel', () => {
+  it('builds a completed thank-you message', () => {
+    const view = buildThankYouViewModel({
+      board: makeBoard(),
+      contribution: {
+        id: 'contrib-1',
+        dreamBoardId: 'board-1',
+        contributorName: 'Ava',
+        amountCents: 2500,
+        feeCents: 0,
+        netCents: 2500,
+        paymentStatus: 'completed',
+      },
+    });
+
+    expect(view.headline).toBe('Thank you, Ava!');
+    expect(view.message).toMatch(/Your R\s*25 contribution is helping Maya get their dream gift\./);
+    expect(view.percentage).toBe(20);
+  });
+
+  it('builds a pending thank-you message', () => {
+    const view = buildThankYouViewModel({
+      board: makeBoard(),
+      contribution: {
+        id: 'contrib-2',
+        dreamBoardId: 'board-1',
+        contributorName: null,
+        amountCents: 2500,
+        feeCents: 0,
+        netCents: 2500,
+        paymentStatus: 'pending',
+      },
+    });
+
+    expect(view.headline).toBe('Thanks for your support!');
+    expect(view.message).toBe('We’ll update this page once your payment is confirmed.');
+  });
+
+  it('builds a philanthropy thank-you message', () => {
+    const view = buildThankYouViewModel({
+      board: makeBoard({
+        giftType: 'philanthropy',
+        payoutMethod: 'philanthropy_donation',
+        giftData: {
+          causeName: 'Plant Trees',
+          causeImage: 'https://example.com/trees.jpg',
+          impactDescription: 'Plant 10 trees',
+        },
+        overflowGiftData: null,
+      }),
+      contribution: {
+        id: 'contrib-3',
+        dreamBoardId: 'board-1',
+        contributorName: 'Ava',
+        amountCents: 2500,
+        feeCents: 0,
+        netCents: 2500,
+        paymentStatus: 'completed',
+      },
+    });
+
+    expect(view.message).toMatch(/supporting Plant Trees: Plant 10 trees\./);
+  });
+
+  it('builds an overflow thank-you message', () => {
+    const view = buildThankYouViewModel({
+      board: makeBoard({ raisedCents: 7000 }),
+      contribution: {
+        id: 'contrib-4',
+        dreamBoardId: 'board-1',
+        contributorName: 'Ava',
+        amountCents: 2500,
+        feeCents: 0,
+        netCents: 2500,
+        paymentStatus: 'completed',
+      },
+    });
+
+    expect(view.message).toMatch(/supporting Feed Hungry Children: Feed a class\./);
   });
 });
