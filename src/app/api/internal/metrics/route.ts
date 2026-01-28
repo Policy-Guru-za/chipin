@@ -13,6 +13,8 @@ const ALLOWED_PROPERTY_KEYS = new Set([
   'platform',
   'step',
   'stepName',
+  'provider',
+  'reference_last4',
 ]);
 
 const customMetricSchema = z.object({
@@ -24,6 +26,10 @@ const customMetricSchema = z.object({
     'payment_method_selected',
     'wizard_step_completed',
     'share_link_clicked',
+    'nav_drawer_opened',
+    'payment_redirect_started',
+    'snapscan_qr_shown',
+    'snapscan_reference_copied',
   ]),
   timestamp: z.number(),
   properties: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),

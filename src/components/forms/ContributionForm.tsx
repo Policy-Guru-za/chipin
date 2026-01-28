@@ -11,6 +11,8 @@ import {
   SnapScanPanel,
   type SnapScanQr,
 } from '@/components/forms/ContributionFormParts';
+import { PaymentOverlay } from '@/components/effects/PaymentOverlay';
+import { trackPaymentRedirectStarted } from '@/lib/analytics/metrics';
 import { calculateFee } from '@/lib/payments/fees';
 import type { PaymentProvider } from '@/lib/payments';
 
@@ -44,22 +46,30 @@ const submitPayfastForm = (payload: Required<Pick<PaymentPayload, 'redirectUrl' 
   form.submit();
 };
 
+type HandlePaymentResult = {
+  error: string | null;
+  isRedirecting: boolean;
+};
+
 const handlePaymentPayload = (
   payload: PaymentPayload | null,
-  setSnapscanQr: (qr: SnapScanQr) => void
-) => {
+  setSnapscanQr: (qr: SnapScanQr) => void,
+  provider: PaymentProvider
+): HandlePaymentResult => {
   if (!payload?.mode) {
-    return 'We could not start your payment.';
+    return { error: 'We could not start your payment.', isRedirecting: false };
   }
 
   if (payload.mode === 'form' && payload.redirectUrl && payload.fields) {
+    trackPaymentRedirectStarted(provider);
     submitPayfastForm({ redirectUrl: payload.redirectUrl, fields: payload.fields });
-    return null;
+    return { error: null, isRedirecting: true };
   }
 
   if (payload.mode === 'redirect' && payload.redirectUrl) {
+    trackPaymentRedirectStarted(provider);
     window.location.assign(payload.redirectUrl);
-    return null;
+    return { error: null, isRedirecting: true };
   }
 
   if (payload.mode === 'qr' && payload.qrUrl && payload.qrImageUrl && payload.reference) {
@@ -68,10 +78,10 @@ const handlePaymentPayload = (
       qrImageUrl: payload.qrImageUrl,
       reference: payload.reference,
     });
-    return null;
+    return { error: null, isRedirecting: false };
   }
 
-  return 'We could not start your payment.';
+  return { error: 'We could not start your payment.', isRedirecting: false };
 };
 
 type ContributionValidationInput = {
@@ -113,6 +123,7 @@ type ContributionSubmitOptions = ContributionValidationInput & {
   setError: (message: string | null) => void;
   setSnapscanQr: (qr: SnapScanQr | null) => void;
   setLoading: (loading: boolean) => void;
+  setIsRedirecting: (isRedirecting: boolean) => void;
 };
 
 const useContributionSubmit = ({
@@ -128,6 +139,7 @@ const useContributionSubmit = ({
   setError,
   setSnapscanQr,
   setLoading,
+  setIsRedirecting,
 }: ContributionSubmitOptions) =>
   useCallback(async () => {
     setError(null);
@@ -167,9 +179,12 @@ const useContributionSubmit = ({
         return;
       }
 
-      const payloadError = handlePaymentPayload(payload, (qr) => setSnapscanQr(qr));
-      if (payloadError) {
-        setError(payloadError);
+      const result = handlePaymentPayload(payload, (qr) => setSnapscanQr(qr), paymentProvider);
+      if (result.error) {
+        setError(result.error);
+      }
+      if (result.isRedirecting) {
+        setIsRedirecting(true);
       }
     } catch {
       setError('We could not start your payment. Please try again.');
@@ -187,6 +202,7 @@ const useContributionSubmit = ({
     parsedCustom,
     paymentProvider,
     setError,
+    setIsRedirecting,
     setLoading,
     setSnapscanQr,
   ]);
@@ -220,6 +236,7 @@ export function ContributionForm({
   const [snapscanQr, setSnapscanQr] = useState<SnapScanQr | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const trimmedCustomAmount = customAmount.trim();
   const isUsingCustom = trimmedCustomAmount.length > 0;
@@ -251,7 +268,11 @@ export function ContributionForm({
     setError,
     setSnapscanQr,
     setLoading,
+    setIsRedirecting,
   });
+
+  // Show overlay for PayFast/Ozow redirects (not SnapScan)
+  const showPaymentOverlay = isRedirecting && paymentProvider !== 'snapscan';
 
   return (
     <div className="space-y-6">
@@ -310,6 +331,7 @@ export function ContributionForm({
         <SnapScanPanel
           qr={snapscanQr}
           slug={slug}
+          dreamBoardId={dreamBoardId}
           onBack={() => {
             setSnapscanQr(null);
             setError(null);
@@ -325,6 +347,8 @@ export function ContributionForm({
         paymentProvider={paymentProvider}
         onSubmit={handleSubmit}
       />
+
+      {showPaymentOverlay && <PaymentOverlay provider={paymentProvider as 'payfast' | 'ozow'} />}
     </div>
   );
 }

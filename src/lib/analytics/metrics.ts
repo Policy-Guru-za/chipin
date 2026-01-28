@@ -9,7 +9,11 @@ export type CustomMetricName =
   | 'goal_reached'
   | 'payment_method_selected'
   | 'wizard_step_completed'
-  | 'share_link_clicked';
+  | 'share_link_clicked'
+  | 'nav_drawer_opened'
+  | 'payment_redirect_started'
+  | 'snapscan_qr_shown'
+  | 'snapscan_reference_copied';
 
 export type CustomMetricData = {
   name: CustomMetricName;
@@ -107,4 +111,32 @@ export function trackShareLinkClicked(platform: string, dreamBoardId: string): v
     platform,
     dreamBoardId,
   });
+}
+
+/**
+ * Track mobile nav drawer usage.
+ */
+export function trackNavDrawerOpened(): void {
+  trackMetric('nav_drawer_opened');
+}
+
+/**
+ * Track payment redirect start.
+ */
+export function trackPaymentRedirectStarted(provider: string): void {
+  trackMetric('payment_redirect_started', { provider });
+}
+
+/**
+ * Track SnapScan QR visibility.
+ */
+export function trackSnapscanQrShown(dreamBoardId?: string): void {
+  trackMetric('snapscan_qr_shown', dreamBoardId ? { dreamBoardId } : undefined);
+}
+
+/**
+ * Track SnapScan reference copy events.
+ */
+export function trackSnapscanReferenceCopied(reference: string): void {
+  trackMetric('snapscan_reference_copied', { reference_last4: reference.slice(-4) });
 }
