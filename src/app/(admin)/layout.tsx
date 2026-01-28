@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { buttonStyles } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { requireAdminSession } from '@/lib/auth/session';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -19,11 +19,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <nav className="flex items-center gap-3">
             <Link
               href="/admin/payouts"
-              className={buttonStyles({ variant: 'outline', size: 'sm' })}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
             >
               Payout Queue
             </Link>
-            <Link href="/dashboard" className={buttonStyles({ variant: 'ghost', size: 'sm' })}>
+            <Link href="/dashboard" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
               Host Dashboard
             </Link>
           </nav>

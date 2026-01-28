@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { buttonStyles } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 
 const navLinkClasses = 'text-sm font-medium text-text-muted transition hover:text-text';
 
@@ -18,7 +18,7 @@ export function Header() {
           <Link href="/#safety" className={navLinkClasses}>
             Trust & safety
           </Link>
-          <Link href="/create" className={buttonStyles({ size: 'sm' })}>
+          <Link href="/create" className={buttonVariants({ size: 'sm' })}>
             Create a Dream Board
           </Link>
         </nav>

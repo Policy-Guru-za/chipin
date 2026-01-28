@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
 
-import { buttonStyles } from './button';
+import { buttonVariants } from './button';
 import { Card, CardContent } from './card';
 
 type StateCardVariant = 'empty' | 'closed' | 'error' | 'loading';
@@ -39,7 +39,7 @@ export function StateCard({
         {title ? <p className="font-semibold">{title}</p> : null}
         {body ? <p>{body}</p> : null}
         {ctaLabel && ctaHref ? (
-          <Link href={ctaHref} className={buttonStyles({ variant: ctaVariant })}>
+          <Link href={ctaHref} className={buttonVariants({ variant: ctaVariant })}>
             {ctaLabel}
           </Link>
         ) : null}

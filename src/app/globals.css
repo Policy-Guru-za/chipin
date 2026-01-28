@@ -3,32 +3,70 @@
 @tailwind utilities;
 
 :root {
+  /* Typography */
   --font-primary: 'Outfit', system-ui, sans-serif;
   --font-display: 'Fraunces', Georgia, serif;
-  --color-primary: #0d9488;
+
+  /* Primary scale */
   --color-primary-50: #f0fdfa;
   --color-primary-100: #ccfbf1;
   --color-primary-200: #99f6e4;
   --color-primary-300: #5eead4;
   --color-primary-400: #2dd4bf;
   --color-primary-500: #14b8a6;
-  --color-primary-light: #5eead4;
-  --color-primary-dark: #134e4a;
-  --color-accent: #f97316;
-  --color-accent-light: #fdba74;
-  --color-accent-dark: #ea580c;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+  --color-primary-800: #115e59;
+  --color-primary-900: #134e4a;
+
+  /* Accent scale */
+  --color-accent-50: #fff7ed;
+  --color-accent-100: #ffedd5;
+  --color-accent-200: #fed7aa;
+  --color-accent-300: #fdba74;
+  --color-accent-400: #fb923c;
+  --color-accent-500: #f97316;
+  --color-accent-600: #ea580c;
+  --color-accent-700: #c2410c;
+
+  /* Semantic aliases */
+  --color-primary: var(--color-primary-600);
+  --color-accent: var(--color-accent-500);
+  --color-accent-light: var(--color-accent-300);
+  --color-accent-dark: var(--color-accent-600);
+
+  /* Surfaces */
   --color-bg: #fefdfb;
   --color-bg-subtle: #fdf8f3;
   --color-bg-muted: #faf9f7;
+  --color-surface: #fafaf9;
+  --color-surface-elevated: #ffffff;
+
+  /* Text */
   --color-text: #1c1917;
   --color-text-secondary: #57534e;
   --color-text-muted: #a8a29e;
-  --color-surface: #fafaf9;
+
+  /* Borders */
   --color-border: #e7e5e4;
   --color-border-strong: #d6d3d1;
+
+  /* Status */
   --color-success: #059669;
   --color-warning: #d97706;
   --color-error: #dc2626;
+
+  /* Focus ring */
+  --focus-ring-color: var(--color-primary);
+  --focus-ring-offset: 2px;
+  --focus-ring-width: 2px;
+
+  /* Animation durations */
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+  --duration-page: 600ms;
 }
 
 * {
@@ -46,4 +84,73 @@ h2,
 h3,
 .display {
   font-family: var(--font-display);
+}
+
+/* Enhanced focus states */
+*:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+button:focus-visible,
+[role='button']:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-primary-100);
+}
+
+.card-interactive:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-100);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-shimmer,
+  .animate-bounce-subtle,
+  .animate-fade-up,
+  [class*='animate-'] {
+    animation: none !important;
+  }
+}
+
+/* Custom keyframes (CSS fallback) */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes bounce-subtle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { buttonStyles } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 
 export default function MarketingPage() {
   return (
@@ -19,7 +19,7 @@ export default function MarketingPage() {
               personal.
             </p>
             <div className="flex flex-wrap items-center gap-4">
-              <Link href="/create" className={buttonStyles({ size: 'lg' })}>
+              <Link href="/create" className={buttonVariants({ size: 'lg' })}>
                 Create a Dream Board
               </Link>
               <span className="text-sm text-text-muted">
