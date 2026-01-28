@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { requireAdminSession } from '@/lib/auth/session';
+import { getExpiringDreamBoards } from '@/lib/db/views';
 import { getPayoutQueueErrorMessage } from '@/lib/payouts/admin-copy';
 import { formatZar } from '@/lib/utils/money';
 import { listDreamBoardsReadyForPayouts, listPayoutsForAdmin } from '@/lib/payouts/queries';
@@ -29,6 +30,11 @@ const payoutTypeLabel = (type: string) =>
     karri_card_topup: 'Karri Card Top-up',
     philanthropy_donation: 'Philanthropy Donation',
   })[type] ?? type;
+
+const dateFormatter = new Intl.DateTimeFormat('en-ZA', {
+  timeZone: 'Africa/Johannesburg',
+});
+const formatDate = (value: Date) => dateFormatter.format(value);
 
 async function createPayoutsAction(formData: FormData) {
   'use server';
@@ -66,8 +72,10 @@ export default async function AdminPayoutsPage({
   const error = typeof searchParams?.error === 'string' ? searchParams.error : null;
   const errorMessage = getPayoutQueueErrorMessage(error);
   const readyBoards = await listDreamBoardsReadyForPayouts();
+  const expiringBoards = await getExpiringDreamBoards();
   const payouts = await listPayoutsForAdmin({
     statuses: ['pending', 'processing', 'failed'],
+    limit: 100,
   });
 
   return (
@@ -115,6 +123,26 @@ export default async function AdminPayoutsPage({
                     Generate payouts
                   </Button>
                 </form>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Expiring in 7 days</h2>
+          <span className="text-xs text-text-muted">{expiringBoards.length} boards</span>
+        </div>
+        {expiringBoards.length === 0 ? (
+          <Card className="p-6 text-sm text-text-muted">No boards are expiring soon.</Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {expiringBoards.map((board) => (
+              <Card key={board.id} className="space-y-2 p-5">
+                <div className="text-lg font-semibold">{board.childName}</div>
+                <div className="text-sm text-text-muted">/{board.slug}</div>
+                <div className="text-sm text-text">Deadline: {formatDate(board.deadline)}</div>
               </Card>
             ))}
           </div>

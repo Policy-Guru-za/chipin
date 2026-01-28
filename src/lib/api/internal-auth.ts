@@ -1,9 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import type { AuditActor } from '@/lib/audit';
-
-const getClientIp = (request: NextRequest) =>
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
+import { getClientIp } from '@/lib/utils/request';
 
 export const requireInternalAuth = (request: NextRequest) => {
   const secret = process.env.INTERNAL_JOB_SECRET;

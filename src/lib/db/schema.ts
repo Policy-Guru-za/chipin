@@ -172,6 +172,10 @@ export const contributions = pgTable(
   },
   (table) => ({
     dreamBoardIdx: index('idx_contributions_dream_board').on(table.dreamBoardId),
+    dreamBoardCreatedAtIdx: index('idx_contributions_dream_board_created_at').on(
+      table.dreamBoardId,
+      table.createdAt
+    ),
     partnerIdx: index('idx_contributions_partner').on(table.partnerId),
     statusIdx: index('idx_contributions_status').on(table.paymentStatus),
     pendingProcessingIdx: index('idx_contributions_pending_processing')
@@ -209,6 +213,7 @@ export const payouts = pgTable(
   },
   (table) => ({
     statusIdx: index('idx_payouts_status').on(table.status),
+    statusCreatedAtIdx: index('idx_payouts_status_created_at').on(table.status, table.createdAt),
     dreamBoardIdx: index('idx_payouts_dream_board').on(table.dreamBoardId),
     partnerIdx: index('idx_payouts_partner').on(table.partnerId),
     uniqueDreamBoardType: uniqueIndex('unique_payout_dream_board_type').on(

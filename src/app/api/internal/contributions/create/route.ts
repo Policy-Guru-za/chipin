@@ -9,6 +9,8 @@ import { calculateTotalWithFee } from '@/lib/payments/fees';
 import { createPaymentIntent, isPaymentProviderAvailable } from '@/lib/payments';
 import { generatePaymentRef } from '@/lib/payments/reference';
 import { log } from '@/lib/observability/logger';
+import { jsonInternalError } from '@/lib/api/internal-response';
+import { getClientIp } from '@/lib/utils/request';
 
 const requestSchema = z.object({
   dreamBoardId: z.string().uuid(),
@@ -20,14 +22,11 @@ const requestSchema = z.object({
 
 type PaymentProvider = z.infer<typeof requestSchema>['paymentProvider'];
 
-const getClientIp = (request: NextRequest) =>
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
-
 const parseRequest = async (request: NextRequest) => {
   const body = await request.json().catch(() => null);
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
-    return { response: NextResponse.json({ error: 'invalid_request' }, { status: 400 }) };
+    return { response: jsonInternalError({ code: 'invalid_request', status: 400 }) };
   }
   return { data: parsed.data };
 };
@@ -39,10 +38,11 @@ const enforceContributionRateLimit = async (
   const rateLimitKey = `contribution:create:${ip ?? 'unknown'}:${dreamBoardId}`;
   const rateLimit = await enforceRateLimit(rateLimitKey, { limit: 10, windowSeconds: 60 * 60 });
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds },
-      { status: 429 }
-    );
+    return jsonInternalError({
+      code: 'rate_limited',
+      status: 429,
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
+    });
   }
   return null;
 };
@@ -64,17 +64,17 @@ const fetchDreamBoard = async (dreamBoardId: string) => {
 
 const validateDreamBoard = (board: Awaited<ReturnType<typeof fetchDreamBoard>>) => {
   if (!board) {
-    return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    return jsonInternalError({ code: 'not_found', status: 404 });
   }
   if (board.status !== 'active' && board.status !== 'funded') {
-    return NextResponse.json({ error: 'board_closed' }, { status: 400 });
+    return jsonInternalError({ code: 'board_closed', status: 400 });
   }
   return null;
 };
 
 const validatePaymentProvider = (provider: PaymentProvider) => {
   if (!isPaymentProviderAvailable(provider)) {
-    return NextResponse.json({ error: 'provider_unavailable' }, { status: 400 });
+    return jsonInternalError({ code: 'provider_unavailable', status: 400 });
   }
   return null;
 };
@@ -138,8 +138,6 @@ export async function POST(request: NextRequest) {
       ip,
       request,
     });
-    await db.insert(contributions).values(payload.contribution);
-
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
     const payment = await createPaymentIntent(parsed.data.paymentProvider, {
       amountCents: payload.payment.totalCents,
@@ -151,11 +149,13 @@ export async function POST(request: NextRequest) {
       expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     });
 
+    await db.insert(contributions).values(payload.contribution);
+
     return NextResponse.json(payment);
   } catch (error) {
     log('error', 'payments.contribution_create_failed', {
       error: error instanceof Error ? error.message : 'unknown_error',
     });
-    return NextResponse.json({ error: 'payment_failed' }, { status: 500 });
+    return jsonInternalError({ code: 'payment_failed', status: 500 });
   }
 }

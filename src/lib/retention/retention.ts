@@ -8,6 +8,7 @@ export const NETWORK_METADATA_NULLS = { ipAddress: null, userAgent: null } as co
 
 export const ANONYMIZED_CHILD_NAME = 'Child';
 export const ANONYMIZED_CHILD_PHOTO_URL = '/images/child-placeholder.svg';
+export const ANONYMIZED_PAYOUT_EMAIL = 'anonymized@chipin.co.za';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { requireAdminSession } from '@/lib/auth/session';
+import { jsonInternalError } from '@/lib/api/internal-response';
 import { log } from '@/lib/observability/logger';
 import { getPayoutDetail } from '@/lib/payouts/queries';
 import { decryptSensitiveBuffer } from '@/lib/utils/encryption';
@@ -85,18 +86,18 @@ export async function GET(
 
   const documentType = getDocumentType(params.type);
   if (!documentType) {
-    return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    return jsonInternalError({ code: 'not_found', status: 404 });
   }
 
   const payout = await getPayoutDetail(params.id);
   if (!payout || payout.type !== 'philanthropy_donation') {
-    return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    return jsonInternalError({ code: 'not_found', status: 404 });
   }
 
   const recipient = (payout.recipientData ?? {}) as Record<string, unknown>;
   const documentInfo = getDocumentInfo(recipient, documentType);
   if (!documentInfo) {
-    return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    return jsonInternalError({ code: 'not_found', status: 404 });
   }
 
   if (!documentInfo.encrypted) {
@@ -112,7 +113,7 @@ export async function GET(
   });
 
   if (!downloaded.ok) {
-    return NextResponse.json({ error: 'unavailable' }, { status: 502 });
+    return jsonInternalError({ code: 'unavailable', status: 502 });
   }
 
   return new Response(downloaded.body, {

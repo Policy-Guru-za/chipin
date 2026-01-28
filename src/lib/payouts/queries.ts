@@ -158,7 +158,11 @@ export const listPayoutsForAdmin = async (filters?: {
   statuses?: Array<PayoutStatus>;
   createdFrom?: Date;
   createdTo?: Date;
+  limit?: number;
+  offset?: number;
 }) => {
+  const limit = filters?.limit ?? 100;
+  const offset = filters?.offset ?? 0;
   const baseQuery = db
     .select({
       id: payouts.id,
@@ -195,7 +199,7 @@ export const listPayoutsForAdmin = async (filters?: {
 
   const filteredQuery = conditions.length ? baseQuery.where(and(...conditions)) : baseQuery;
 
-  return filteredQuery.orderBy(desc(payouts.createdAt));
+  return filteredQuery.orderBy(desc(payouts.createdAt)).limit(limit).offset(offset);
 };
 
 export const getPayoutDetail = async (payoutId: string) => {

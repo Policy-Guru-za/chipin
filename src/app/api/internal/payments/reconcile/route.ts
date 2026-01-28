@@ -13,6 +13,7 @@ import {
   sendMismatchAlert,
   type ReconciliationPassResult,
 } from '@/lib/payments/reconciliation-job';
+import { jsonInternalError } from '@/lib/api/internal-response';
 
 const isAuthorized = (request: NextRequest) => {
   const secret = process.env.INTERNAL_JOB_SECRET;
@@ -25,11 +26,11 @@ export async function POST(request: NextRequest) {
   const requestId = request.headers.get('x-request-id') ?? undefined;
   if (!process.env.INTERNAL_JOB_SECRET) {
     log('error', 'payments.reconcile_missing_secret', undefined, requestId);
-    return NextResponse.json({ error: 'misconfigured' }, { status: 503 });
+    return jsonInternalError({ code: 'misconfigured', status: 503 });
   }
 
   if (!isAuthorized(request)) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    return jsonInternalError({ code: 'unauthorized', status: 401 });
   }
 
   const now = new Date();

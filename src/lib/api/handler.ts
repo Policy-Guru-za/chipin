@@ -6,11 +6,9 @@ import { requireApiKey } from '@/lib/api/auth';
 import { jsonError } from '@/lib/api/response';
 import { buildRateLimitHeaders, enforceApiRateLimit, getBurstLimit } from '@/lib/api/rate-limit';
 import { getRequestId } from '@/lib/observability/logger';
+import { getClientIp } from '@/lib/utils/request';
 
 const ANONYMOUS_RATE_LIMIT = 1000;
-
-const getClientIp = (request: NextRequest) =>
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
 
 export type ApiAuthContext = {
   requestId: string;

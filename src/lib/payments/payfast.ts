@@ -147,7 +147,8 @@ export const verifyPayfastSignature = (rawBody: string) => {
   const { fields, signature } = parsePayfastBody(rawBody);
   if (!signature) return false;
   const expected = generateSignature(fields, config.passphrase);
-  return signature === expected;
+  if (signature.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'));
 };
 
 export const validatePayfastSource = (ipAddress?: string | null) => {

@@ -3,6 +3,10 @@ import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/auth/session';
 import { listPayoutsForAdmin } from '@/lib/payouts/queries';
 
+const BATCH_SIZE = 500;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_RANGE_DAYS = 365;
+
 const escapeCsv = (value: string | number | null | undefined) => {
   const stringValue = String(value ?? '');
   if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
@@ -10,6 +14,37 @@ const escapeCsv = (value: string | number | null | undefined) => {
   }
   return stringValue;
 };
+
+const formatPayoutRow = (payout: Awaited<ReturnType<typeof listPayoutsForAdmin>>[number]) => [
+  payout.id,
+  payout.status,
+  payout.type,
+  (payout.netCents / 100).toFixed(2),
+  (payout.grossCents / 100).toFixed(2),
+  (payout.feeCents / 100).toFixed(2),
+  payout.createdAt?.toISOString?.() ?? '',
+  payout.completedAt?.toISOString?.() ?? '',
+  payout.dreamBoardSlug ?? '',
+  payout.childName ?? '',
+  payout.payoutEmail ?? '',
+  payout.hostEmail ?? '',
+];
+
+const CSV_HEADER =
+  [
+    'id',
+    'status',
+    'type',
+    'net_amount',
+    'gross_amount',
+    'fee_amount',
+    'created_at',
+    'completed_at',
+    'dream_board_slug',
+    'child_name',
+    'payout_email',
+    'host_email',
+  ].join(',') + '\n';
 
 export async function GET(request: Request) {
   await requireAdminSession();
@@ -42,41 +77,47 @@ export async function GET(request: Request) {
     return new NextResponse('Invalid date range', { status: 400 });
   }
 
-  const payouts = await listPayoutsForAdmin({ createdFrom, createdTo });
-  const rows = [
-    [
-      'id',
-      'status',
-      'type',
-      'net_amount',
-      'gross_amount',
-      'fee_amount',
-      'created_at',
-      'completed_at',
-      'dream_board_slug',
-      'child_name',
-      'payout_email',
-      'host_email',
-    ],
-    ...payouts.map((payout) => [
-      payout.id,
-      payout.status,
-      payout.type,
-      (payout.netCents / 100).toFixed(2),
-      (payout.grossCents / 100).toFixed(2),
-      (payout.feeCents / 100).toFixed(2),
-      payout.createdAt?.toISOString?.() ?? '',
-      payout.completedAt?.toISOString?.() ?? '',
-      payout.dreamBoardSlug ?? '',
-      payout.childName ?? '',
-      payout.payoutEmail ?? '',
-      payout.hostEmail ?? '',
-    ]),
-  ];
+  if (createdTo.getTime() - createdFrom.getTime() > MAX_RANGE_DAYS * DAY_MS) {
+    return new NextResponse('Date range exceeds 365 days', { status: 400 });
+  }
 
-  const csv = rows.map((row) => row.map(escapeCsv).join(',')).join('\n');
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode(CSV_HEADER));
 
-  return new NextResponse(csv, {
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const batch = await listPayoutsForAdmin({
+          createdFrom,
+          createdTo,
+          limit: BATCH_SIZE,
+          offset,
+        });
+
+        if (batch.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        const lines =
+          batch.map((payout) => formatPayoutRow(payout).map(escapeCsv).join(',')).join('\n') + '\n';
+
+        controller.enqueue(encoder.encode(lines));
+        offset += batch.length;
+
+        if (batch.length < BATCH_SIZE) {
+          hasMore = false;
+        }
+      }
+
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
     headers: {
       'Content-Type': 'text/csv',
       'Content-Disposition': 'attachment; filename="chipin-payouts.csv"',

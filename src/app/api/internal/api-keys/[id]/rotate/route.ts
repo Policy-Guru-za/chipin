@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { recordAuditEvent } from '@/lib/audit';
 import { requireInternalAuth, getInternalActor } from '@/lib/api/internal-auth';
+import { jsonInternalError } from '@/lib/api/internal-response';
 import { buildApiKeyRecord, generateApiKeyToken, resolveRateLimit } from '@/lib/api/keys';
 import { createApiKeyRecord, deactivateApiKey, getApiKeyById } from '@/lib/db/api-key-queries';
 import { isValidUuid } from '@/lib/api/validation';
@@ -27,29 +28,30 @@ const resolveEnvironment = (keyPrefix: string) => (keyPrefix.includes('_test_') 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const auth = requireInternalAuth(request);
   if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
+    return jsonInternalError({ code: auth.error, status: auth.status });
   }
 
   if (!isValidUuid(params.id)) {
-    return NextResponse.json({ error: 'invalid_id' }, { status: 400 });
+    return jsonInternalError({ code: 'invalid_id', status: 400 });
   }
 
   const body = await request.json().catch(() => null);
   const parsed = requestSchema.safeParse(body ?? {});
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'invalid_request', details: parsed.error.flatten() },
-      { status: 400 }
-    );
+    return jsonInternalError({
+      code: 'invalid_request',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
   }
 
   if (parsed.data.tier === 'enterprise' && typeof parsed.data.rate_limit !== 'number') {
-    return NextResponse.json({ error: 'rate_limit_required' }, { status: 400 });
+    return jsonInternalError({ code: 'rate_limit_required', status: 400 });
   }
 
   const existing = await getApiKeyById(params.id);
   if (!existing) {
-    return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    return jsonInternalError({ code: 'not_found', status: 404 });
   }
 
   const rateLimit = resolveRateLimit({
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   });
 
   if (!created) {
-    return NextResponse.json({ error: 'create_failed' }, { status: 500 });
+    return jsonInternalError({ code: 'create_failed', status: 500 });
   }
 
   await deactivateApiKey(existing.id);

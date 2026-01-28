@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { enforceRateLimit } from '@/lib/auth/rate-limit';
 import { getSession } from '@/lib/auth/session';
+import { jsonInternalError } from '@/lib/api/internal-response';
 import { fetchTakealotProduct } from '@/lib/integrations/takealot';
 
 const requestSchema = z.object({
@@ -12,7 +13,7 @@ const requestSchema = z.object({
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    return jsonInternalError({ code: 'unauthorized', status: 401 });
   }
 
   const rateLimit = await enforceRateLimit(`takealot:product:${session.hostId}`, {
@@ -21,26 +22,36 @@ export async function POST(request: NextRequest) {
   });
 
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds },
-      { status: 429 }
-    );
+    return jsonInternalError({
+      code: 'rate_limited',
+      status: 429,
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
+    });
   }
 
   const body = await request.json().catch(() => null);
   const parsed = requestSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+    return jsonInternalError({ code: 'invalid_request', status: 400 });
   }
 
   try {
     const product = await fetchTakealotProduct(parsed.data.url);
-    return NextResponse.json({ data: product });
+    return NextResponse.json({
+      data: {
+        id: product.productId ?? null,
+        name: product.name,
+        price_cents: product.priceCents,
+        image_url: product.imageUrl,
+        product_url: product.url,
+        in_stock: product.inStock,
+      },
+    });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'fetch_failed' },
-      { status: 400 }
-    );
+    return jsonInternalError({
+      code: error instanceof Error ? error.message : 'fetch_failed',
+      status: 400,
+    });
   }
 }

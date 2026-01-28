@@ -18,14 +18,17 @@ import {
 } from '@/lib/db/queries';
 import { invalidateDreamBoardCacheById } from '@/lib/dream-boards/cache';
 import { log } from '@/lib/observability/logger';
+import { getClientIp } from '@/lib/utils/request';
+import { emitWebhookEventForPartner } from '@/lib/webhooks';
+import {
+  buildContributionWebhookPayload,
+  buildDreamBoardWebhookPayload,
+} from '@/lib/webhooks/payloads';
 
 type WebhookContext = {
   requestId?: string;
   ip?: string | null;
 };
-
-const getClientIp = (request: NextRequest) =>
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
 
 const getWebhookContext = (request: NextRequest): WebhookContext => ({
   requestId: request.headers.get('x-request-id') ?? undefined,
@@ -202,7 +205,49 @@ export async function POST(request: NextRequest) {
   await invalidateDreamBoardCacheById(contribution.dreamBoardId);
 
   if (status === 'completed') {
-    await markDreamBoardFundedIfNeeded(contribution.dreamBoardId);
+    const wasFunded = await markDreamBoardFundedIfNeeded(contribution.dreamBoardId);
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+    const contributionPayload = await buildContributionWebhookPayload({
+      contribution: { ...contribution, paymentStatus: status },
+      baseUrl,
+    });
+
+    const eventIds = await emitWebhookEventForPartner(
+      contribution.partnerId,
+      'contribution.received',
+      contributionPayload.data,
+      contributionPayload.meta
+    );
+
+    if (!eventIds?.length) {
+      log('warn', 'webhooks.emit_failed', {
+        partnerId: contribution.partnerId,
+        eventType: 'contribution.received',
+        contributionId: contribution.id,
+      });
+    }
+
+    if (wasFunded) {
+      const dreamBoardPayload = await buildDreamBoardWebhookPayload(
+        contribution.dreamBoardId,
+        baseUrl
+      );
+
+      const eventIds = await emitWebhookEventForPartner(
+        contribution.partnerId,
+        'pot.funded',
+        dreamBoardPayload.data,
+        dreamBoardPayload.meta
+      );
+
+      if (!eventIds?.length) {
+        log('warn', 'webhooks.emit_failed', {
+          partnerId: contribution.partnerId,
+          eventType: 'pot.funded',
+          dreamBoardId: contribution.dreamBoardId,
+        });
+      }
+    }
   }
 
   return NextResponse.json({ received: true });

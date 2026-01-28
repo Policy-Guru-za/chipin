@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, inArray, lt, ne, sql } from 'drizzle-orm';
 
 import type { PaymentProvider } from '@/lib/payments';
+import { isValidUuid } from '@/lib/utils/validation';
 
 import { db } from './index';
 import { apiKeys, contributions, dreamBoards, hosts } from './schema';
@@ -112,10 +113,8 @@ export async function getDreamBoardBySlug(slug: string, partnerId?: string) {
   return board ?? null;
 }
 
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 export const getDreamBoardByPublicId = async (identifier: string, partnerId?: string) => {
-  if (!uuidRegex.test(identifier)) {
+  if (!isValidUuid(identifier)) {
     return getDreamBoardBySlug(identifier, partnerId);
   }
 
@@ -220,7 +219,13 @@ export async function getDreamBoardDetailForHost(id: string, hostId: string) {
   return board ?? null;
 }
 
-export async function listContributionsForDreamBoard(dreamBoardId: string) {
+export async function listContributionsForDreamBoard(
+  dreamBoardId: string,
+  options: { limit?: number; offset?: number } = {}
+) {
+  const limit = options.limit ?? 100;
+  const offset = options.offset ?? 0;
+
   return db
     .select({
       id: contributions.id,
@@ -234,7 +239,9 @@ export async function listContributionsForDreamBoard(dreamBoardId: string) {
     })
     .from(contributions)
     .where(eq(contributions.dreamBoardId, dreamBoardId))
-    .orderBy(desc(contributions.createdAt));
+    .orderBy(desc(contributions.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function listRecentContributors(dreamBoardId: string, limit = 6) {
@@ -261,12 +268,15 @@ export async function getContributionByPaymentRef(
   const [contribution] = await db
     .select({
       id: contributions.id,
+      partnerId: contributions.partnerId,
       dreamBoardId: contributions.dreamBoardId,
       contributorName: contributions.contributorName,
+      message: contributions.message,
       amountCents: contributions.amountCents,
       feeCents: contributions.feeCents,
       netCents: contributions.netCents,
       paymentStatus: contributions.paymentStatus,
+      createdAt: contributions.createdAt,
     })
     .from(contributions)
     .where(
@@ -360,7 +370,7 @@ export async function listContributionsForLongTailReconciliation(
     );
 }
 
-export async function markDreamBoardFundedIfNeeded(dreamBoardId: string) {
+export async function markDreamBoardFundedIfNeeded(dreamBoardId: string): Promise<boolean> {
   const [board] = await db
     .select({
       goalCents: dreamBoards.goalCents,
@@ -379,12 +389,14 @@ export async function markDreamBoardFundedIfNeeded(dreamBoardId: string) {
     .groupBy(dreamBoards.id)
     .limit(1);
 
-  if (!board) return;
-  if (board.status !== 'active') return;
-  if (board.raisedCents < board.goalCents) return;
+  if (!board) return false;
+  if (board.status !== 'active') return false;
+  if (board.raisedCents < board.goalCents) return false;
 
   await db
     .update(dreamBoards)
     .set({ status: 'funded', updatedAt: new Date() })
     .where(eq(dreamBoards.id, dreamBoardId));
+
+  return true;
 }

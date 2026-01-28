@@ -14,9 +14,13 @@ import {
 } from '@/lib/db/queries';
 import { invalidateDreamBoardCacheById } from '@/lib/dream-boards/cache';
 import { log } from '@/lib/observability/logger';
-
-const getClientIp = (request: NextRequest) =>
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
+import { extractTimestampValue, validateWebhookTimestamp } from '@/lib/payments/webhook-utils';
+import { getClientIp } from '@/lib/utils/request';
+import { emitWebhookEventForPartner } from '@/lib/webhooks';
+import {
+  buildContributionWebhookPayload,
+  buildDreamBoardWebhookPayload,
+} from '@/lib/webhooks/payloads';
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
@@ -40,6 +44,20 @@ export async function POST(request: NextRequest) {
   if (!payload) {
     log('warn', 'payments.ozow_invalid_signature', undefined, requestId);
     return NextResponse.json({ error: 'invalid_signature' }, { status: 400 });
+  }
+
+  const timestampHeader = request.headers.get('svix-timestamp');
+  const timestampValue = timestampHeader
+    ? extractTimestampValue({ ts: timestampHeader }, ['ts'])
+    : null;
+  if (timestampValue) {
+    const timestampResult = validateWebhookTimestamp(timestampValue);
+    if (!timestampResult.ok) {
+      log('warn', 'payments.ozow_invalid_timestamp', { reason: timestampResult.reason }, requestId);
+      return NextResponse.json({ error: 'invalid_timestamp' }, { status: 400 });
+    }
+  } else {
+    log('warn', 'payments.ozow_timestamp_missing', undefined, requestId);
   }
 
   const paymentRef = extractOzowReference(payload);
@@ -79,7 +97,49 @@ export async function POST(request: NextRequest) {
   await invalidateDreamBoardCacheById(contribution.dreamBoardId);
 
   if (status === 'completed') {
-    await markDreamBoardFundedIfNeeded(contribution.dreamBoardId);
+    const wasFunded = await markDreamBoardFundedIfNeeded(contribution.dreamBoardId);
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+    const contributionPayload = await buildContributionWebhookPayload({
+      contribution: { ...contribution, paymentStatus: status },
+      baseUrl,
+    });
+
+    const eventIds = await emitWebhookEventForPartner(
+      contribution.partnerId,
+      'contribution.received',
+      contributionPayload.data,
+      contributionPayload.meta
+    );
+
+    if (!eventIds?.length) {
+      log('warn', 'webhooks.emit_failed', {
+        partnerId: contribution.partnerId,
+        eventType: 'contribution.received',
+        contributionId: contribution.id,
+      });
+    }
+
+    if (wasFunded) {
+      const dreamBoardPayload = await buildDreamBoardWebhookPayload(
+        contribution.dreamBoardId,
+        baseUrl
+      );
+
+      const eventIds = await emitWebhookEventForPartner(
+        contribution.partnerId,
+        'pot.funded',
+        dreamBoardPayload.data,
+        dreamBoardPayload.meta
+      );
+
+      if (!eventIds?.length) {
+        log('warn', 'webhooks.emit_failed', {
+          partnerId: contribution.partnerId,
+          eventType: 'pot.funded',
+          dreamBoardId: contribution.dreamBoardId,
+        });
+      }
+    }
   }
 
   return NextResponse.json({ received: true });

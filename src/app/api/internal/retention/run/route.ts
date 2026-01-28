@@ -6,11 +6,13 @@ import { contributions, dreamBoards } from '@/lib/db/schema';
 import {
   ANONYMIZED_CHILD_NAME,
   ANONYMIZED_CHILD_PHOTO_URL,
+  ANONYMIZED_PAYOUT_EMAIL,
   getRetentionCutoffs,
   NETWORK_METADATA_NULLS,
   RETENTION_ELIGIBLE_STATUSES,
 } from '@/lib/retention/retention';
 import { log } from '@/lib/observability/logger';
+import { jsonInternalError } from '@/lib/api/internal-response';
 
 const isAuthorized = (request: NextRequest) => {
   const secret = process.env.INTERNAL_JOB_SECRET;
@@ -23,11 +25,11 @@ export async function POST(request: NextRequest) {
   const requestId = request.headers.get('x-request-id') ?? undefined;
   if (!process.env.INTERNAL_JOB_SECRET) {
     log('error', 'retention.missing_secret', undefined, requestId);
-    return NextResponse.json({ error: 'misconfigured' }, { status: 503 });
+    return jsonInternalError({ code: 'misconfigured', status: 503 });
   }
 
   if (!isAuthorized(request)) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    return jsonInternalError({ code: 'unauthorized', status: 401 });
   }
 
   const now = new Date();
@@ -62,6 +64,7 @@ export async function POST(request: NextRequest) {
         .set({
           childName: ANONYMIZED_CHILD_NAME,
           childPhotoUrl: ANONYMIZED_CHILD_PHOTO_URL,
+          payoutEmail: ANONYMIZED_PAYOUT_EMAIL,
           updatedAt: now,
         })
         .where(inArray(dreamBoards.id, boardIds))

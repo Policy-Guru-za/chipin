@@ -40,7 +40,9 @@ describe('payout queries', () => {
     query.from = vi.fn(() => query);
     query.leftJoin = vi.fn(() => query);
     query.where = vi.fn(() => query);
-    query.orderBy = vi.fn(async () => [{ id: 'payout-1' }]);
+    query.orderBy = vi.fn(() => query);
+    query.limit = vi.fn(() => query);
+    query.offset = vi.fn(async () => [{ id: 'payout-1' }]);
 
     dbMock.select.mockReturnValueOnce(query);
 

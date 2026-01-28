@@ -17,7 +17,7 @@ export default async function DreamBoardDetailPage({ params }: { params: { id: s
     redirect('/dashboard');
   }
 
-  const contributions = await listContributionsForDreamBoard(board.id);
+  const contributions = await listContributionsForDreamBoard(board.id, { limit: 100 });
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
   const view = buildDashboardViewModel(board, { baseUrl });
 

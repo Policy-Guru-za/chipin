@@ -174,11 +174,9 @@ export function TakealotGiftForm({
     setLoading(true);
 
     try {
-      const response = await fetch('/api/internal/products/takealot/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
+      const response = await fetch(
+        `/api/internal/products/search?q=${encodeURIComponent(query.trim())}`
+      );
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
@@ -192,7 +190,14 @@ export function TakealotGiftForm({
         return;
       }
 
-      setResults(payload.data as TakealotProduct[]);
+      const mappedResults = (payload.data as Array<Record<string, unknown>>).map((item) => ({
+        url: String(item.product_url ?? ''),
+        name: String(item.name ?? ''),
+        priceCents: Number(item.price_cents ?? 0),
+        imageUrl: String(item.image_url ?? ''),
+      }));
+
+      setResults(mappedResults);
     } catch {
       setSearchError('Search failed. Please try again.');
     } finally {

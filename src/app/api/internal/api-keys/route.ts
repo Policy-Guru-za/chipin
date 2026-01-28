@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { recordAuditEvent } from '@/lib/audit';
 import { requireInternalAuth, getInternalActor } from '@/lib/api/internal-auth';
 import { buildApiKeyRecord, generateApiKeyToken, resolveRateLimit } from '@/lib/api/keys';
+import { jsonInternalError } from '@/lib/api/internal-response';
 import { createApiKeyRecord } from '@/lib/db/api-key-queries';
 import { DEFAULT_PARTNER_ID } from '@/lib/db/partners';
 
@@ -27,20 +28,21 @@ const requestSchema = z.object({
 export async function POST(request: NextRequest) {
   const auth = requireInternalAuth(request);
   if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
+    return jsonInternalError({ code: auth.error, status: auth.status });
   }
 
   const body = await request.json().catch(() => null);
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'invalid_request', details: parsed.error.flatten() },
-      { status: 400 }
-    );
+    return jsonInternalError({
+      code: 'invalid_request',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
   }
 
   if (parsed.data.tier === 'enterprise' && typeof parsed.data.rate_limit !== 'number') {
-    return NextResponse.json({ error: 'rate_limit_required' }, { status: 400 });
+    return jsonInternalError({ code: 'rate_limit_required', status: 400 });
   }
 
   const rateLimit = resolveRateLimit({
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!created) {
-    return NextResponse.json({ error: 'create_failed' }, { status: 500 });
+    return jsonInternalError({ code: 'create_failed', status: 500 });
   }
 
   await recordAuditEvent({
