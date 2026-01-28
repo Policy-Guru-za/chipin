@@ -33,8 +33,14 @@ export function initWebVitals(onReport: ReportCallback): void {
 }
 
 /**
+ * Sampling rate for web vitals in production (5% = 0.05).
+ * Always report poor metrics regardless of sampling.
+ */
+const SAMPLING_RATE = 0.05;
+
+/**
  * Default reporter that logs to console in development
- * and sends to analytics endpoint in production.
+ * and sends to analytics endpoint in production with sampling.
  */
 export function reportWebVitals(metric: WebVitalsMetric): void {
   // Guard against server-side execution
@@ -44,6 +50,12 @@ export function reportWebVitals(metric: WebVitalsMetric): void {
 
   if (process.env.NODE_ENV === 'development') {
     console.log(`[Web Vitals] ${metric.name}: ${metric.value.toFixed(2)} (${metric.rating})`);
+    return;
+  }
+
+  // In production, apply sampling (always report poor metrics)
+  const shouldSample = metric.rating === 'poor' || Math.random() < SAMPLING_RATE;
+  if (!shouldSample) {
     return;
   }
 

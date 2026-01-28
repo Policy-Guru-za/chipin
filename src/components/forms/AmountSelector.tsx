@@ -27,12 +27,13 @@ export function AmountSelector({
   className,
 }: AmountSelectorProps) {
   const [customAmount, setCustomAmount] = useState<string>('');
-  const [isCustom, setIsCustom] = useState(false);
+  const [isCustomInputActive, setIsCustomInputActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
-  // Derive whether a preset is selected from controlled value
-  const selectedPreset = value !== null && value !== undefined && presets.includes(value);
+  // Derive selection state from controlled value
+  const isPresetSelected = value !== null && value !== undefined && presets.includes(value);
+  const isCustomMode = isCustomInputActive && !isPresetSelected;
 
   const formatCents = useCallback(
     (cents: number) => {
@@ -43,7 +44,7 @@ export function AmountSelector({
 
   const handlePresetClick = useCallback(
     (amountCents: number) => {
-      setIsCustom(false);
+      setIsCustomInputActive(false);
       setCustomAmount('');
       setError(null);
       onChange?.(amountCents);
@@ -52,10 +53,13 @@ export function AmountSelector({
   );
 
   const handleCustomFocus = useCallback(() => {
-    setIsCustom(true);
+    setIsCustomInputActive(true);
     setError(null);
-    onChange?.(null);
-  }, [onChange]);
+    // Only clear value if a preset was selected
+    if (value !== null && value !== undefined && presets.includes(value)) {
+      onChange?.(null);
+    }
+  }, [onChange, value, presets]);
 
   const handleCustomChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +91,7 @@ export function AmountSelector({
       {/* Preset amounts */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {presets.map((amountCents) => {
-          const isSelected = !isCustom && value === amountCents;
+          const isSelected = value === amountCents;
           return (
             <button
               key={amountCents}
@@ -123,7 +127,7 @@ export function AmountSelector({
           className={cn(
             'w-full rounded-xl border-2 py-3 pl-10 pr-4 text-lg font-semibold transition-all',
             !prefersReducedMotion && 'duration-150',
-            isCustom && customAmount
+            isCustomMode && customAmount
               ? 'border-primary bg-primary/5 text-primary'
               : 'border-border bg-white text-text placeholder:text-text-muted',
             'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
