@@ -34,13 +34,14 @@ export function triggerConfetti(options: ConfettiOptions = {}): void {
 /**
  * Trigger a celebration burst from both sides.
  * Use for goal reached, purchase complete, etc.
+ * Returns a cleanup function to stop the celebration early.
  */
-export function triggerCelebration(duration = 3000): void {
+export function triggerCelebration(duration = 3000): () => void {
   if (
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   ) {
-    return;
+    return () => {};
   }
 
   const animationEnd = Date.now() + duration;
@@ -76,6 +77,8 @@ export function triggerCelebration(duration = 3000): void {
       origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
     });
   }, 250);
+
+  return () => clearInterval(interval);
 }
 
 /**

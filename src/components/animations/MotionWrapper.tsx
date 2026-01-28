@@ -1,15 +1,35 @@
 'use client';
 
-import { lazy, Suspense, type ReactNode } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { lazy, Suspense, type ReactNode, type ComponentType } from 'react';
 
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { staggerContainerVariants } from '@/lib/animations/variants';
 
 interface MotionWrapperProps {
   children: ReactNode;
   className?: string;
 }
+
+/**
+ * Lazy-load framer-motion components to avoid eager bundling.
+ */
+const LazyStaggerContainerInner = lazy(() =>
+  Promise.all([import('framer-motion'), import('@/lib/animations/variants')]).then(
+    ([{ motion }, { staggerContainerVariants }]) => ({
+      default: function StaggerContainerInner({ children, className }: MotionWrapperProps) {
+        return (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainerVariants}
+            className={className}
+          >
+            {children}
+          </motion.div>
+        );
+      },
+    })
+  )
+);
 
 /**
  * Wrapper for stagger animations.
@@ -23,20 +43,34 @@ export function StaggerContainer({ children, className }: MotionWrapperProps) {
   }
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={staggerContainerVariants}
-      className={className}
-    >
-      {children}
-    </motion.div>
+    <Suspense fallback={<div className={className}>{children}</div>}>
+      <LazyStaggerContainerInner className={className}>{children}</LazyStaggerContainerInner>
+    </Suspense>
   );
 }
 
+type MotionItemVariants = Record<string, { opacity?: number; y?: number; x?: number }>;
+
 interface MotionItemProps extends MotionWrapperProps {
-  variants?: Variants;
+  variants?: MotionItemVariants;
 }
+
+const LazyMotionItemInner = lazy(() =>
+  import('framer-motion').then(({ motion }) => ({
+    default: function MotionItemInner({ children, className, variants }: MotionItemProps) {
+      const defaultVariants: MotionItemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0 },
+      };
+
+      return (
+        <motion.div variants={variants ?? defaultVariants} className={className}>
+          {children}
+        </motion.div>
+      );
+    },
+  }))
+) as ComponentType<MotionItemProps>;
 
 /**
  * Individual motion item for use inside StaggerContainer.
@@ -48,15 +82,12 @@ export function MotionItem({ children, className, variants }: MotionItemProps) {
     return <div className={className}>{children}</div>;
   }
 
-  const defaultVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
-
   return (
-    <motion.div variants={variants ?? defaultVariants} className={className}>
-      {children}
-    </motion.div>
+    <Suspense fallback={<div className={className}>{children}</div>}>
+      <LazyMotionItemInner className={className} variants={variants}>
+        {children}
+      </LazyMotionItemInner>
+    </Suspense>
   );
 }
 

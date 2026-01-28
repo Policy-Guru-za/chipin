@@ -1,54 +1,94 @@
+/**
+ * @vitest-environment jsdom
+ */
+import * as React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 describe('useReducedMotion hook', () => {
-  let matchMediaMock: ReturnType<typeof vi.fn>;
   let addEventListenerMock: ReturnType<typeof vi.fn>;
   let removeEventListenerMock: ReturnType<typeof vi.fn>;
+  let changeListener: (() => void) | null = null;
+  let currentMatches = false;
 
-  beforeEach(() => {
-    addEventListenerMock = vi.fn();
-    removeEventListenerMock = vi.fn();
+  function createMatchMediaMock(matches: boolean) {
+    currentMatches = matches;
+    addEventListenerMock = vi.fn().mockImplementation((event: string, callback: () => void) => {
+      if (event === 'change') {
+        changeListener = callback;
+      }
+    });
+    removeEventListenerMock = vi.fn().mockImplementation(() => {
+      changeListener = null;
+    });
 
-    matchMediaMock = vi.fn().mockImplementation((query: string) => ({
-      matches: query === '(prefers-reduced-motion: reduce)',
-      media: query,
+    return vi.fn().mockImplementation(() => ({
+      get matches() {
+        return currentMatches;
+      },
+      media: '(prefers-reduced-motion: reduce)',
       addEventListener: addEventListenerMock,
       removeEventListener: removeEventListenerMock,
     }));
+  }
 
-    vi.stubGlobal('matchMedia', matchMediaMock);
+  beforeEach(() => {
+    changeListener = null;
+    currentMatches = false;
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    changeListener = null;
+    currentMatches = false;
   });
 
   it('should return true when prefers-reduced-motion is reduce', () => {
-    const mediaQueryResult = matchMediaMock('(prefers-reduced-motion: reduce)');
-    expect(mediaQueryResult.matches).toBe(true);
+    vi.stubGlobal('matchMedia', createMatchMediaMock(true));
+
+    const { result } = renderHook(() => useReducedMotion());
+    expect(result.current).toBe(true);
   });
 
   it('should return false when prefers-reduced-motion is not reduce', () => {
-    matchMediaMock = vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      addEventListener: addEventListenerMock,
-      removeEventListenerMock: removeEventListenerMock,
-    }));
+    vi.stubGlobal('matchMedia', createMatchMediaMock(false));
 
-    vi.stubGlobal('matchMedia', matchMediaMock);
-    const mediaQueryResult = matchMediaMock('(prefers-reduced-motion: reduce)');
-    expect(mediaQueryResult.matches).toBe(false);
+    const { result } = renderHook(() => useReducedMotion());
+    expect(result.current).toBe(false);
   });
 
-  it('should properly subscribe and unsubscribe from media query changes', () => {
-    const mediaQueryResult = matchMediaMock('(prefers-reduced-motion: reduce)');
+  it('should subscribe to media query changes on mount', () => {
+    vi.stubGlobal('matchMedia', createMatchMediaMock(false));
 
-    const callback = vi.fn();
-    mediaQueryResult.addEventListener('change', callback);
-    expect(addEventListenerMock).toHaveBeenCalledWith('change', callback);
+    renderHook(() => useReducedMotion());
+    expect(addEventListenerMock).toHaveBeenCalledWith('change', expect.any(Function));
+  });
 
-    mediaQueryResult.removeEventListener('change', callback);
-    expect(removeEventListenerMock).toHaveBeenCalledWith('change', callback);
+  it('should unsubscribe from media query changes on unmount', () => {
+    vi.stubGlobal('matchMedia', createMatchMediaMock(false));
+
+    const { unmount } = renderHook(() => useReducedMotion());
+    unmount();
+
+    expect(removeEventListenerMock).toHaveBeenCalledWith('change', expect.any(Function));
+  });
+
+  it('should update when media query changes', () => {
+    vi.stubGlobal('matchMedia', createMatchMediaMock(false));
+
+    const { result } = renderHook(() => useReducedMotion());
+    expect(result.current).toBe(false);
+
+    // Simulate media query change
+    act(() => {
+      currentMatches = true;
+      if (changeListener) {
+        changeListener();
+      }
+    });
+
+    expect(result.current).toBe(true);
   });
 });

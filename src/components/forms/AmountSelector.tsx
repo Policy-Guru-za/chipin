@@ -28,12 +28,24 @@ export function AmountSelector({
 }: AmountSelectorProps) {
   const [customAmount, setCustomAmount] = useState<string>('');
   const [isCustom, setIsCustom] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
+
+  // Derive whether a preset is selected from controlled value
+  const selectedPreset = value !== null && value !== undefined && presets.includes(value);
+
+  const formatCents = useCallback(
+    (cents: number) => {
+      return `${currency}${(cents / 100).toLocaleString()}`;
+    },
+    [currency]
+  );
 
   const handlePresetClick = useCallback(
     (amountCents: number) => {
       setIsCustom(false);
       setCustomAmount('');
+      setError(null);
       onChange?.(amountCents);
     },
     [onChange]
@@ -41,6 +53,7 @@ export function AmountSelector({
 
   const handleCustomFocus = useCallback(() => {
     setIsCustom(true);
+    setError(null);
     onChange?.(null);
   }, [onChange]);
 
@@ -51,21 +64,23 @@ export function AmountSelector({
 
       if (rawValue) {
         const cents = parseInt(rawValue, 10) * 100;
-        if (cents >= minAmount && cents <= maxAmount) {
-          onChange?.(cents);
-        } else {
+        if (cents < minAmount) {
+          setError(`Minimum amount is ${formatCents(minAmount)}`);
           onChange?.(null);
+        } else if (cents > maxAmount) {
+          setError(`Maximum amount is ${formatCents(maxAmount)}`);
+          onChange?.(null);
+        } else {
+          setError(null);
+          onChange?.(cents);
         }
       } else {
+        setError(null);
         onChange?.(null);
       }
     },
-    [onChange, minAmount, maxAmount]
+    [onChange, minAmount, maxAmount, formatCents]
   );
-
-  const formatCents = (cents: number) => {
-    return `${currency}${(cents / 100).toLocaleString()}`;
-  };
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -116,10 +131,19 @@ export function AmountSelector({
         />
       </div>
 
+      {/* Validation error */}
+      {error && (
+        <p className="text-center text-sm text-error" role="alert">
+          {error}
+        </p>
+      )}
+
       {/* Min/max hint */}
-      <p className="text-center text-xs text-text-muted">
-        Min {formatCents(minAmount)} · Max {formatCents(maxAmount)}
-      </p>
+      {!error && (
+        <p className="text-center text-xs text-text-muted">
+          Min {formatCents(minAmount)} · Max {formatCents(maxAmount)}
+        </p>
+      )}
     </div>
   );
 }

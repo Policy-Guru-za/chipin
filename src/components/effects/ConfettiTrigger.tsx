@@ -29,13 +29,19 @@ export function ConfettiTrigger({
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
+
     if (trigger && !prefersReducedMotion) {
       if (variant === 'celebration') {
-        triggerCelebration(celebrationDuration);
+        cleanup = triggerCelebration(celebrationDuration);
       } else {
         triggerConfetti({ disableForReducedMotion: true });
       }
     }
+
+    return () => {
+      cleanup?.();
+    };
   }, [trigger, variant, celebrationDuration, prefersReducedMotion]);
 
   useEffect(() => {

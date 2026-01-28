@@ -24,6 +24,11 @@ export function trackMetric(
   name: CustomMetricName,
   properties?: Record<string, string | number | boolean>
 ): void {
+  // Guard against server-side execution
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   const metric: CustomMetricData = {
     name,
     timestamp: Date.now(),

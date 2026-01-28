@@ -37,6 +37,11 @@ export function initWebVitals(onReport: ReportCallback): void {
  * and sends to analytics endpoint in production.
  */
 export function reportWebVitals(metric: WebVitalsMetric): void {
+  // Guard against server-side execution
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   if (process.env.NODE_ENV === 'development') {
     console.log(`[Web Vitals] ${metric.name}: ${metric.value.toFixed(2)} (${metric.rating})`);
     return;
@@ -48,7 +53,7 @@ export function reportWebVitals(metric: WebVitalsMetric): void {
     value: metric.value,
     rating: metric.rating,
     id: metric.id,
-    page: typeof window !== 'undefined' ? window.location.pathname : '',
+    page: window.location.pathname,
   });
 
   // Use sendBeacon for reliable delivery
