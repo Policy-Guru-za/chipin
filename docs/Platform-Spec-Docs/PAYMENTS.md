@@ -1,7 +1,7 @@
 # ChipIn Payment Flows
 
 > **Version:** 1.0.0  
-> **Last Updated:** January 2026  
+> **Last Updated:** January 28, 2026  
 > **Status:** Ready for Development
 
 ---
@@ -259,6 +259,16 @@ Total: R206
 
 ## Provider Integrations
 
+### Idempotency & Replay Safety
+
+Payment provider webhooks are treated as **at-least-once** (duplicates and replays are expected).
+
+**Required patterns:**
+- Make contribution status updates idempotent: if the computed status equals the current status, **no-op + return 200**.
+- Only perform side effects (e.g., marking a board funded, cache invalidation) **after** a status transition.
+- Validate `amount_gross`/amount fields against the contribution’s expected total.
+- Apply webhook rate limiting to reduce abuse and log structured warnings on rejects.
+
 ### PayFast Integration
 
 **Environment Variables:**
@@ -356,10 +366,13 @@ class PayFastProvider implements PaymentProvider {
 ```
 
 **PayFast ITN hardening (required):**
+- Apply webhook rate limiting.
 - Verify signature from **raw** ITN body (not parsed/reordered fields).
-- Validate source (PayFast domains/IPs) and compare expected amount.
+- In production, validate source IP.
+- Validate merchant details.
+- Validate timestamp if present (missing timestamp may be accepted but must be logged).
 - POST back to PayFast `/eng/query/validate` and require `VALID`.
-- Process idempotently keyed by `pf_payment_id`.
+- Require `pf_payment_id` presence and process idempotently by contribution `payment_ref` + status transitions.
 - Unresolved PayFast doc gaps tracked in `docs/payment-docs/payfast-open-questions.md`.
 
 ### Ozow Integration

@@ -1,7 +1,7 @@
 # ChipIn Technical Documentation
 
 > **Version:** 1.0.0  
-> **Last Updated:** January 2026  
+> **Last Updated:** January 28, 2026  
 > **Status:** Ready for Development
 
 ---
@@ -48,12 +48,18 @@
 | [`docs/Platform-Spec-Docs/NFR-OPERATIONS.md`](./docs/Platform-Spec-Docs/NFR-OPERATIONS.md) | Non-functional requirements | SLOs + ops |
 | [`AGENTS.md`](./AGENTS.md) | AI coding agent instructions | **READ FIRST** |
 
+### OpenAPI
+
+- File: `public/v1/openapi.json`
+- Local: `http://localhost:3000/v1/openapi.json`
+- Production: `https://api.chipin.co.za/v1/openapi.json`
+
 ### Integration Specs
 
 | Document | Status | Description |
 |----------|--------|-------------|
 | [`docs/Platform-Spec-Docs/TAKEALOT.md`](./docs/Platform-Spec-Docs/TAKEALOT.md) | P0 - MVP | Product data + gift card payout |
-| [`docs/Platform-Spec-Docs/PHILANTHROPY.md`](./docs/Platform-Spec-Docs/PHILANTHROPY.md) | P1 - Post-MVP | Charitable giving option |
+| [`docs/Platform-Spec-Docs/PHILANTHROPY.md`](./docs/Platform-Spec-Docs/PHILANTHROPY.md) | P0 - MVP | Philanthropy Dream Boards + charity overflow |
 | [`docs/Platform-Spec-Docs/KARRI.md`](./docs/Platform-Spec-Docs/KARRI.md) | P1 - Optional | Karri Card payout |
 
 ---
@@ -80,6 +86,7 @@
 
 ### In Scope
 - ✅ Dream Board creation with Takealot URL
+- ✅ Philanthropy-only Dream Boards (primary charity goal)
 - ✅ Magic link authentication
 - ✅ Guest contribution via PayFast, Ozow (EFT), SnapScan (QR)
 - ✅ Optional payout method: Fund my Karri Card
@@ -87,11 +94,10 @@
 - ✅ Progress tracking
 - ✅ Email notifications
 - ✅ Takealot gift card or Karri top-up payout (manual process OK)
+- ✅ Public Partner API (API keys, scopes, rate limiting)
 
 ### Out of Scope (Post-MVP)
-- ❌ Primary philanthropy-only Dream Boards (charity overflow is in-scope)
 - ❌ Karri Card API automation (manual top-up OK for MVP)
-- ❌ Partner API program
 - ❌ Native mobile apps
 
 ---
@@ -120,11 +126,23 @@ cp .env.example .env.local
 # Fill in environment variables
 
 # 3. Set up database
-pnpm drizzle-kit generate:pg
-pnpm drizzle-kit push:pg
+pnpm drizzle:generate
+pnpm drizzle:push
 
 # 4. Run development server
 pnpm dev
+```
+
+## Useful Commands
+
+```bash
+# Lint / types / tests
+pnpm lint
+pnpm typecheck
+pnpm test
+
+# Load testing
+pnpm test:load
 ```
 
 ---

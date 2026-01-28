@@ -64,7 +64,7 @@ interface TopUpResult {
 
 Karri can integrate with our public API to:
 1. Receive webhook notifications for `payout.ready` events
-2. Confirm payout completion via `POST /api/v1/payouts/{id}/confirm`
+2. Confirm payout completion via `POST /v1/payouts/{id}/confirm`
 
 This means ChipIn is the source of truth; Karri integrates with us.
 

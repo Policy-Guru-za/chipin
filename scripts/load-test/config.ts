@@ -15,10 +15,7 @@ const parseNumber = (value: string | undefined, fallback: number) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const baseUrl = (process.env.LOAD_TEST_BASE_URL ?? 'http://localhost:3000/api/v1').replace(
-  /\/$/,
-  ''
-);
+const baseUrl = (process.env.LOAD_TEST_BASE_URL ?? 'http://localhost:3000/v1').replace(/\/$/, '');
 
 export const loadTestConfig: LoadTestConfig = {
   baseUrl,

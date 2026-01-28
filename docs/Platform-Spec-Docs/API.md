@@ -1,7 +1,7 @@
 # ChipIn Public API Specification
 
 > **Version:** 1.0.0  
-> **Last Updated:** January 2026  
+> **Last Updated:** January 28, 2026  
 > **Status:** Ready for Development
 
 ---
@@ -14,7 +14,7 @@ ChipIn exposes a RESTful API for partner integrations. The API follows the princ
 
 ```
 Production:  https://api.chipin.co.za/v1
-Development: http://localhost:3000/api/v1
+Development: http://localhost:3000/v1
 ```
 
 ### API Design Principles
@@ -52,19 +52,40 @@ Authorization: Bearer cpk_live_xxxxxxxxxxxxxxxxxxxx
 | `payouts:write` | Confirm payout execution |
 | `webhooks:manage` | Manage webhook endpoints |
 
+### Tenant Isolation (Partner Scoping)
+
+- Every API key belongs to a single **partner** (tenant).
+- All reads/writes are scoped to that partner; cross-tenant resource access returns `404 not_found`.
+- Rate limiting is applied at the **partner** level (shared across that partner's API keys).
+
 ### Rate Limiting
 
-| Tier | Requests/Hour | Burst |
-|------|---------------|-------|
-| Default | 1,000 | 100/min |
-| Partner | 10,000 | 500/min |
+Limits are applied per **partner**:
+
+- **Hourly quota:** fixed window counter (requests/hour)
+- **Burst quota:** **sliding window** over the last 60 seconds (requests/minute)
+
+| Tier | Requests/Hour | Burst (per 60s sliding window) |
+|------|---------------|--------------------------------|
+| Default | 1,000 | 100 |
+| Partner | 10,000 | 500 |
 | Enterprise | Custom | Custom |
 
-Rate limit headers in every response:
+Rate limit headers are returned on every response. `Retry-After` is only included on `429` responses.
+
+**Example (200 response):**
 ```http
 X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 999
 X-RateLimit-Reset: 1706140800
+```
+
+**Example (429 response):**
+```http
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1706140800
+Retry-After: 30
 ```
 
 ---
@@ -815,8 +836,10 @@ Full OpenAPI 3.0 specification available at:
 
 ```
 https://api.chipin.co.za/v1/openapi.json
-https://api.chipin.co.za/v1/docs  (Swagger UI)
+http://localhost:3000/v1/openapi.json
 ```
+
+Source file: `public/v1/openapi.json`
 
 ---
 

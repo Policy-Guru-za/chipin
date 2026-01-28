@@ -1,7 +1,7 @@
 # ChipIn Implementation Plan (0 → 1)
 
 > Version: 1.0.0
-> Last Updated: January 21, 2026
+> Last Updated: January 28, 2026
 > Status: Active
 
 ## Purpose
@@ -391,6 +391,10 @@ This is the main tracking document for phase-by-phase execution.
 - Performance, load, and security audits.
 - Launch runbook and on-call rotation.
 
+**Status Notes (as of January 28, 2026)**
+- Completed: API key auth + scope enforcement, partner tenant isolation, partner-scoped rate limiting (hourly + 60s sliding window), OpenAPI spec published (`public/v1/openapi.json`), load testing tooling.
+- Remaining: production-like performance measurement (needs staging URL), pen test, ops runbooks/launch checklist.
+
 **Tasks**
 - Implement API auth (API keys, scopes, rate limiting).
 - Document API usage and error codes.
@@ -431,7 +435,7 @@ This is the main tracking document for phase-by-phase execution.
 - Karri API availability and commercial terms.
 - Charity disbursement partner requirements.
 - Vendor webhook requirements are critical path; gaps must be resolved or risk acceptance documented.
-- Repository currently lacks application scaffold; Phase 0 must create it.
+- Repository scaffold exists; Phase 0 foundations established.
 
 ## Open Questions Tracking
 

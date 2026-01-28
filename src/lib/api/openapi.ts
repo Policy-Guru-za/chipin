@@ -13,7 +13,7 @@ export const openApiSpec = {
       description: 'Production',
     },
     {
-      url: 'http://localhost:3000/api/v1',
+      url: 'http://localhost:3000/v1',
       description: 'Local development',
     },
   ],

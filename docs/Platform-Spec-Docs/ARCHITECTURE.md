@@ -1,7 +1,7 @@
 # ChipIn Technical Architecture
 
 > **Version:** 1.0.0  
-> **Last Updated:** January 2026  
+> **Last Updated:** January 28, 2026  
 > **Status:** Ready for Development
 
 ---
@@ -444,6 +444,12 @@ https://api.chipin.co.za/v1
 Authorization: Bearer cpk_live_xxxxxxxxxxxx
 ```
 
+### Tenant Isolation
+
+- Public API requests run in a **partner** context derived from the API key.
+- All public API queries are filtered by `partner_id` at the database layer.
+- Requests for resources outside the partner scope return `404`.
+
 ### Core Endpoints
 
 | Method | Endpoint | Description |
@@ -483,13 +489,15 @@ Full API specification in [API.md](./API.md).
 | Key Pattern | TTL | Purpose |
 |-------------|-----|---------|
 | `session:{token}` | 7 days | User sessions |
-| `dreamboard:{slug}` | 5 min | Dream Board cache (guest view) |
-| `ratelimit:{ip}` | 1 min | Rate limiting |
+| `dream-board:{slug}` | 5 min | Dream Board cache (guest view); dates hydrated on read |
+| `webhook:{provider}:{ip}` | 1 min | Webhook rate limiting (fixed window) |
+| `rate:api:partner:{partnerId}:hour` | 1 hour | Public API hourly quota (partner-scoped) |
+| `rate:api:partner:{partnerId}:minute` | 60s | Public API burst quota (partner-scoped sliding window) |
 | `product:{url_hash}` | 24 hours | Takealot product data |
 
 ### Cache Invalidation
 
-- Dream Board cache invalidated on any contribution
+- Dream Board cache invalidated when a contribution status transitions (webhooks + reconciliation)
 - Product cache refreshed daily or on-demand
 - Session cache invalidated on logout
 

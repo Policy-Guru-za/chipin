@@ -1,7 +1,7 @@
 # ChipIn Data Models
 
 > **Version:** 1.0.0  
-> **Last Updated:** January 2026  
+> **Last Updated:** January 28, 2026  
 > **Status:** Ready for Development
 
 ---
@@ -15,79 +15,65 @@ ChipIn uses PostgreSQL (via Neon) with Drizzle ORM. This document defines all da
 ## Entity Relationship Diagram
 
 ```
-┌─────────────────┐
-│      hosts      │
-├─────────────────┤
-│ id (PK)         │
-│ email (unique)  │
-│ name            │
-│ created_at      │
-│ updated_at      │
-└────────┬────────┘
-         │
-         │ 1:N
-         ▼
-┌─────────────────┐       ┌─────────────────┐
-│  dream_boards   │       │  contributions  │
-├─────────────────┤       ├─────────────────┤
-│ id (PK)         │       │ id (PK)         │
-│ host_id (FK)    │◄──────│ dream_board_id  │
-│ slug (unique)   │  1:N  │ contributor_name│
-│ child_name      │       │ amount_cents    │
-│ child_photo_url │       │ message         │
-│ gift_type       │       │ payment_provider│
-│ gift_data       │       │ payment_ref     │
-│ payout_method   │       │ payment_status  │
-│ overflow_gift_data│     │ fee_cents       │
-│ goal_cents      │       │ ip_address      │
-│ message         │       │ created_at      │
-│ deadline        │       │ updated_at      │
-│ status          │       └─────────────────┘
-│ created_at      │
-│ updated_at      │
-└────────┬────────┘
-         │
-         │ 1:N
-         ▼
-┌─────────────────┐
-│     payouts     │
-├─────────────────┤
-│ id (PK)         │
-│ dream_board_id  │
-│ type            │
-│ gross_cents     │
-│ fee_cents       │
-│ net_cents       │
-│ recipient_data  │
-│ status          │
-│ external_ref    │
-│ created_at      │
-│ completed_at    │
-└─────────────────┘
+┌─────────────────┐        ┌─────────────────┐
+│    partners     │        │      hosts      │
+├─────────────────┤        ├─────────────────┤
+│ id (PK)         │        │ id (PK)         │
+│ name (unique)   │        │ email (unique)  │
+│ created_at      │        │ created_at      │
+└───────┬─────────┘        └───────┬─────────┘
+        │ 1:N                      │ 1:N
+        │                          │
+        ├───────────────┐          │
+        ▼               ▼          ▼
+┌─────────────────┐  ┌─────────────────┐
+│    api_keys     │  │  dream_boards   │
+├─────────────────┤  ├─────────────────┤
+│ id (PK)         │  │ id (PK)         │
+│ partner_id (FK) │  │ partner_id (FK) │
+│ key_hash        │  │ host_id (FK)    │
+│ scopes[]        │  │ slug (unique)   │
+│ rate_limit      │  │ gift_type       │
+└───────┬─────────┘  │ goal_cents      │
+        │ 1:N        └───────┬─────────┘
+        ▼                    │ 1:N
+┌────────────────────┐       ▼
+│ webhook_endpoints  │  ┌─────────────────┐
+├────────────────────┤  │  contributions  │
+│ id (PK)            │  ├─────────────────┤
+│ api_key_id (FK)    │  │ id (PK)         │
+│ url                │  │ partner_id (FK) │
+│ events[]           │  │ dream_board_id  │
+└─────────┬──────────┘  │ payment_status  │
+          │ 1:N          └───────┬─────────┘
+          ▼                      │ 1:N
+┌─────────────────┐              ▼
+│ webhook_events  │       ┌─────────────────┐
+├─────────────────┤       │     payouts     │
+│ id (PK)         │       ├─────────────────┤
+│ api_key_id (FK) │       │ id (PK)         │
+│ event_type      │       │ partner_id (FK) │
+│ status          │       │ dream_board_id  │
+└─────────────────┘       │ type            │
+                          └───────┬─────────┘
+                                  │ 1:N
+                                  ▼
+                           ┌─────────────────┐
+                           │  payout_items   │
+                           ├─────────────────┤
+                           │ id (PK)         │
+                           │ payout_id (FK)  │
+                           │ type            │
+                           │ amount_cents    │
+                           └─────────────────┘
 
 ┌─────────────────┐
-│   api_keys      │
+│   audit_logs    │
 ├─────────────────┤
 │ id (PK)         │
-│ partner_name    │
-│ key_hash        │
-│ key_prefix      │
-│ scopes          │
-│ rate_limit      │
-│ is_active       │
-│ created_at      │
-│ last_used_at    │
-└─────────────────┘
-
-┌─────────────────┐
-│ webhook_events  │
-├─────────────────┤
-│ id (PK)         │
-│ event_type      │
-│ payload         │
-│ status          │
-│ attempts        │
-│ last_attempt_at │
+│ actor_type      │
+│ action          │
+│ target_type/id  │
 │ created_at      │
 └─────────────────┘
 ```
@@ -138,6 +124,38 @@ export const hosts = pgTable('hosts', {
 
 ---
 
+### partners
+
+Partners represent tenants for public API access and data isolation. All records exposed via the public API are scoped to a partner.
+
+```sql
+CREATE TABLE partners (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX unique_partners_name ON partners(name);
+```
+
+**Drizzle Schema:**
+
+```typescript
+import { pgTable, uuid, varchar, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+
+export const partners = pgTable(
+  'partners',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 100 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    nameIdx: uniqueIndex('unique_partners_name').on(table.name),
+  })
+);
+```
+
 ### dream_boards
 
 Core entity representing a child's birthday gift funding page.
@@ -166,6 +184,7 @@ CREATE TYPE payout_method AS ENUM (
 
 CREATE TABLE dream_boards (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE RESTRICT,
   host_id UUID NOT NULL REFERENCES hosts(id) ON DELETE CASCADE,
   slug VARCHAR(100) NOT NULL UNIQUE,
   
@@ -180,6 +199,7 @@ CREATE TABLE dream_boards (
   goal_cents INTEGER NOT NULL,
   payout_method payout_method NOT NULL,
   overflow_gift_data JSONB, -- Required for takealot_product
+  karri_card_number TEXT,
 
   -- Content
   message TEXT,
@@ -204,6 +224,9 @@ CREATE TABLE dream_boards (
     (gift_type = 'takealot_product' AND payout_method IN ('takealot_gift_card', 'karri_card_topup')) OR
     (gift_type = 'philanthropy' AND payout_method = 'philanthropy_donation')
   ),
+  CONSTRAINT karri_card_required CHECK (
+    (payout_method != 'karri_card_topup' OR karri_card_number IS NOT NULL)
+  ),
   CONSTRAINT overflow_required CHECK (
     (gift_type = 'takealot_product' AND overflow_gift_data IS NOT NULL) OR
     (gift_type = 'philanthropy')
@@ -211,6 +234,7 @@ CREATE TABLE dream_boards (
 );
 
 CREATE INDEX idx_dream_boards_host ON dream_boards(host_id);
+CREATE INDEX idx_dream_boards_partner ON dream_boards(partner_id);
 CREATE INDEX idx_dream_boards_slug ON dream_boards(slug);
 CREATE INDEX idx_dream_boards_status ON dream_boards(status);
 CREATE INDEX idx_dream_boards_deadline ON dream_boards(deadline) WHERE status = 'active';
@@ -235,6 +259,7 @@ export const payoutMethodEnum = pgEnum('payout_method', [
 
 export const dreamBoards = pgTable('dream_boards', {
   id: uuid('id').primaryKey().defaultRandom(),
+  partnerId: uuid('partner_id').notNull().references(() => partners.id, { onDelete: 'restrict' }),
   hostId: uuid('host_id').notNull().references(() => hosts.id, { onDelete: 'cascade' }),
   slug: varchar('slug', { length: 100 }).notNull().unique(),
   
@@ -249,6 +274,7 @@ export const dreamBoards = pgTable('dream_boards', {
   goalCents: integer('goal_cents').notNull(),
   payoutMethod: payoutMethodEnum('payout_method').notNull(),
   overflowGiftData: jsonb('overflow_gift_data'),
+  karriCardNumber: text('karri_card_number'),
   
   // Content
   message: text('message'),
@@ -324,6 +350,7 @@ CREATE TYPE payment_provider AS ENUM (
 
 CREATE TABLE contributions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE RESTRICT,
   dream_board_id UUID NOT NULL REFERENCES dream_boards(id) ON DELETE CASCADE,
   
   -- Contributor details (optional)
@@ -353,7 +380,10 @@ CREATE TABLE contributions (
 );
 
 CREATE INDEX idx_contributions_dream_board ON contributions(dream_board_id);
+CREATE INDEX idx_contributions_partner ON contributions(partner_id);
 CREATE INDEX idx_contributions_status ON contributions(payment_status);
+CREATE INDEX idx_contributions_pending_processing ON contributions(payment_status, created_at)
+  WHERE payment_status IN ('pending', 'processing');
 CREATE INDEX idx_contributions_payment_ref ON contributions(payment_provider, payment_ref);
 ```
 
@@ -372,6 +402,7 @@ export const paymentProviderEnum = pgEnum('payment_provider', [
 
 export const contributions = pgTable('contributions', {
   id: uuid('id').primaryKey().defaultRandom(),
+  partnerId: uuid('partner_id').notNull().references(() => partners.id, { onDelete: 'restrict' }),
   dreamBoardId: uuid('dream_board_id').notNull().references(() => dreamBoards.id, { onDelete: 'cascade' }),
   
   // Contributor details
@@ -419,6 +450,7 @@ CREATE TYPE payout_type AS ENUM (
 
 CREATE TABLE payouts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE RESTRICT,
   dream_board_id UUID NOT NULL REFERENCES dream_boards(id),
   
   -- Payout details
@@ -445,6 +477,7 @@ CREATE TABLE payouts (
 
 CREATE INDEX idx_payouts_status ON payouts(status);
 CREATE INDEX idx_payouts_dream_board ON payouts(dream_board_id);
+CREATE INDEX idx_payouts_partner ON payouts(partner_id);
 ```
 
 **Drizzle Schema:**
@@ -460,6 +493,7 @@ export const payoutTypeEnum = pgEnum('payout_type', [
 
 export const payouts = pgTable('payouts', {
   id: uuid('id').primaryKey().defaultRandom(),
+  partnerId: uuid('partner_id').notNull().references(() => partners.id, { onDelete: 'restrict' }),
   dreamBoardId: uuid('dream_board_id').notNull().references(() => dreamBoards.id),
   
   // Payout details
@@ -507,6 +541,59 @@ interface KarriCardPayoutData {
 
 ---
 
+### payout_items
+
+Payout items break a payout into ledger-style components (e.g., gift vs overflow).
+
+```sql
+CREATE TYPE payout_item_type AS ENUM ('gift', 'overflow');
+
+CREATE TABLE payout_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  payout_id UUID NOT NULL REFERENCES payouts(id) ON DELETE CASCADE,
+  dream_board_id UUID NOT NULL REFERENCES dream_boards(id) ON DELETE CASCADE,
+  type payout_item_type NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT valid_payout_item_amount CHECK (amount_cents >= 0)
+);
+
+CREATE INDEX idx_payout_items_payout ON payout_items(payout_id);
+CREATE INDEX idx_payout_items_dream_board ON payout_items(dream_board_id);
+CREATE INDEX idx_payout_items_type ON payout_items(type);
+CREATE UNIQUE INDEX unique_payout_item_type ON payout_items(payout_id, type);
+```
+
+---
+
+### audit_logs
+
+Audit log table for security-sensitive and money-adjacent actions.
+
+```sql
+CREATE TYPE audit_actor_type AS ENUM ('admin', 'host', 'system');
+
+CREATE TABLE audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_type audit_actor_type NOT NULL,
+  actor_id UUID,
+  actor_email VARCHAR(255),
+  action VARCHAR(100) NOT NULL,
+  target_type VARCHAR(50) NOT NULL,
+  target_id VARCHAR(100) NOT NULL,
+  metadata JSONB,
+  ip_address INET,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX idx_audit_logs_target ON audit_logs(target_type, target_id);
+CREATE INDEX idx_audit_logs_actor ON audit_logs(actor_type, actor_id);
+```
+
+---
+
 ### api_keys
 
 Stores API keys for partner integrations.
@@ -514,6 +601,7 @@ Stores API keys for partner integrations.
 ```sql
 CREATE TABLE api_keys (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE RESTRICT,
   partner_name VARCHAR(100) NOT NULL,
   key_hash VARCHAR(255) NOT NULL,  -- bcrypt hash
   key_prefix VARCHAR(12) NOT NULL, -- e.g., "cpk_live_abc"
@@ -525,6 +613,7 @@ CREATE TABLE api_keys (
 );
 
 CREATE INDEX idx_api_keys_prefix ON api_keys(key_prefix);
+CREATE INDEX idx_api_keys_partner ON api_keys(partner_id);
 CREATE INDEX idx_api_keys_active ON api_keys(is_active) WHERE is_active = true;
 ```
 
@@ -533,6 +622,28 @@ CREATE INDEX idx_api_keys_active ON api_keys(is_active) WHERE is_active = true;
 ### magic_links
 
 Magic links are stored in **Vercel KV** (no database table in MVP).
+
+---
+
+### webhook_endpoints
+
+Partner-managed webhook subscriptions. Endpoints are created and managed via the public API.
+
+```sql
+CREATE TABLE webhook_endpoints (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  api_key_id UUID NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  events TEXT[] NOT NULL DEFAULT '{}',
+  secret TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_webhook_endpoints_api_key ON webhook_endpoints(api_key_id);
+CREATE INDEX idx_webhook_endpoints_active ON webhook_endpoints(is_active) WHERE is_active = true;
+```
 
 ---
 
@@ -675,13 +786,19 @@ CREATE TYPE payment_status AS ENUM (...);
 CREATE TYPE payment_provider AS ENUM (...);
 CREATE TYPE payout_status AS ENUM (...);
 CREATE TYPE payout_type AS ENUM (...);
+CREATE TYPE payout_item_type AS ENUM (...);
+CREATE TYPE audit_actor_type AS ENUM (...);
 
 -- Create tables
+CREATE TABLE partners (...);
 CREATE TABLE hosts (...);
 CREATE TABLE dream_boards (...);
 CREATE TABLE contributions (...);
 CREATE TABLE payouts (...);
+CREATE TABLE payout_items (...);
+CREATE TABLE audit_logs (...);
 CREATE TABLE api_keys (...);
+CREATE TABLE webhook_endpoints (...);
 CREATE TABLE webhook_events (...);
 
 -- Create indexes
@@ -694,9 +811,9 @@ CREATE VIEW dream_boards_with_totals AS ...;
 ### Running Migrations
 
 ```bash
-# Using Drizzle Kit
-pnpm drizzle-kit generate:pg
-pnpm drizzle-kit push:pg
+# Using Drizzle
+pnpm drizzle:generate
+pnpm drizzle:push
 
 # Or with raw SQL
 psql $DATABASE_URL -f migrations/001_initial_schema.sql
